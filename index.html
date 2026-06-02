@@ -570,19 +570,16 @@ html,body{height:100%;font-family:var(--font);color:var(--ink);background:var(--
     <!-- Singles sidelines (27ft of 36ft doubles width) -->
     <line x1="75" y1="6" x2="75" y2="108" stroke="rgba(255,255,255,.11)" stroke-width="1.2"/>
     <line x1="385" y1="6" x2="385" y2="108" stroke="rgba(255,255,255,.11)" stroke-width="1.2"/>
-    <!-- Net -->
-    <line x1="24" y1="57" x2="436" y2="57" stroke="rgba(255,255,255,.2)" stroke-width="1.5"/>
-    <!-- Net posts markers -->
+    <!-- Net — stops at singles sidelines (x=75 to x=385) -->
+    <line x1="75" y1="57" x2="385" y2="57" stroke="rgba(255,255,255,.2)" stroke-width="1.5"/>
+    <!-- Net post markers at doubles sidelines -->
     <line x1="24" y1="52" x2="24" y2="62" stroke="rgba(255,255,255,.16)" stroke-width="2"/>
     <line x1="436" y1="52" x2="436" y2="62" stroke="rgba(255,255,255,.16)" stroke-width="2"/>
-    <!-- Service boxes (between singles lines, 21ft from net) -->
-    <line x1="75" y1="30" x2="385" y2="30" stroke="rgba(255,255,255,.22)" stroke-width="1.2"/>
+    <!-- Service lines (between singles sidelines only) -->
+    <line x1="75" y1="30" x2="385" y2="30" stroke="rgba(255,255,255,.1)" stroke-width="1"/>
     <line x1="75" y1="84" x2="385" y2="84" stroke="rgba(255,255,255,.1)" stroke-width="1"/>
-    <!-- Center service line -->
-    <line x1="230" y1="30" x2="230" y2="84" stroke="rgba(255,255,255,.1)" stroke-width="1"/>
-    <!-- Center marks at baselines -->
-    <line x1="230" y1="6" x2="230" y2="13" stroke="rgba(255,255,255,.13)" stroke-width="1"/>
-    <line x1="230" y1="101" x2="230" y2="108" stroke="rgba(255,255,255,.13)" stroke-width="1"/>
+    <!-- Center vertical line — full length end to end -->
+    <line x1="230" y1="6" x2="230" y2="108" stroke="rgba(255,255,255,.1)" stroke-width="1"/>
   </svg>
   <div class="hero-top">
     <div>
@@ -1406,7 +1403,7 @@ function buildChart(m){
   const byM={};m.forEach(x=>{const mo=x.date.slice(0,7);if(!byM[mo])byM[mo]={w:0,t:0};byM[mo].t++;if(x.res==='win')byM[mo].w++;});
   const now=new Date(),keys=[];
   for(let i=2;i>=0;i--){const d=new Date(now.getFullYear(),now.getMonth()-i,1);keys.push(d.toISOString().slice(0,7));}
-  const labels=keys.map(k=>new Date(k+'-01').toLocaleString('default',{month:'short'}));
+  const labels=keys.map(k=>{const[y,m]=k.split('-').map(Number);return new Date(y,m-1,1).toLocaleString('default',{month:'short'});});
   const data=keys.map(k=>byM[k]?Math.round(byM[k].w/byM[k].t*100):null);
   const s=SEASONS[getSeason()];
   if(wrChart)wrChart.destroy();
