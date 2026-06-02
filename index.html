@@ -959,8 +959,22 @@ async function authFetch(path, method='POST', body=null) {
 }
 
 // Compatibility shim so all api() calls still work
+function isValidUUID(str){
+  return str && /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(str);
+}
+
 async function api(action, data={}) {
-  // routed to direct REST calls below
+  // Guard against fake local IDs
+  const uid = sbUser?.id;
+  if(uid && !isValidUUID(uid)){
+    console.warn('Invalid user ID — needs fresh login:', uid);
+    // Force sign out and re-auth
+    sbUser=null;profile=null;
+    ['cs_token','cs_refresh','cs_profile'].forEach(k=>localStorage.removeItem(k));
+    document.getElementById('auth-screen').classList.add('show');
+    showToast('Please sign in again to connect with friends');
+    throw new Error('Invalid session — please sign in again');
+  }
   return await apiRouter(action, data);
 }
 
