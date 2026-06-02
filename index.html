@@ -1011,7 +1011,19 @@ async function apiRouter(action, data) {
   }
 
   if (action === 'search_profiles') {
-    const q=encodeURIComponent('%'+data.q+'%'); return await sbFetch(`/rest/v1/profiles?or=(username.ilike.${q},name.ilike.${q})&id=neq.${data.exclude_id}&select=id,name,username,avatar_color,avatar_text_color,club,usta_rating&limit=8`);
+    // Simple name search — avoid complex OR queries
+    const q=encodeURIComponent('%'+data.q+'%');
+    const byName = await sbFetch(`/rest/v1/profiles?name=ilike.${q}&select=id,name,username,avatar_color,avatar_text_color,club,usta_rating&limit=8`);
+    const byUsername = await sbFetch(`/rest/v1/profiles?username=ilike.${q}&select=id,name,username,avatar_color,avatar_text_color,club,usta_rating&limit=8`);
+    // Merge and deduplicate
+    const all = [...(Array.isArray(byName)?byName:[]), ...(Array.isArray(byUsername)?byUsername:[])];
+    const seen = new Set();
+    return all.filter(p => {
+      if(p.id === data.exclude_id) return false;
+      if(seen.has(p.id)) return false;
+      seen.add(p.id);
+      return true;
+    });
   }
 
   if (action === 'get_entries') {
@@ -1059,7 +1071,12 @@ async function apiRouter(action, data) {
   }
 
   if (action === 'send_friend_request') {
-    return await sbFetch('/rest/v1/friends', 'POST', {user_id:data.user_id, friend_id:data.friend_id, status:'pending'});
+    try {
+      return await sbFetch('/rest/v1/friends', 'POST', {user_id:data.user_id, friend_id:data.friend_id, status:'pending'});
+    } catch(e) {
+      // Already exists — that's fine
+      return {ok:true};
+    }
   }
 
   if (action === 'accept_friend') {
@@ -1081,7 +1098,7 @@ async function apiRouter(action, data) {
   }
 
   if (action === 'send_dm') {
-    return await sbFetch('/rest/v1/direct_messages', 'POST', {from_id:data.from_id, to_id:data.to_id, body:data.message});
+    return await sbFetch('/rest/v1/direct_messages', 'POST', {from_id:data.from_id, to_id:data.to_id, body:data.message||data.body||''});
   }
 
   if (action === 'get_teams') {
