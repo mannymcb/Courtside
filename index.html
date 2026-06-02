@@ -1226,6 +1226,7 @@ async function loadUserData(){
   }
   document.getElementById('auth-screen').classList.remove('show');
   document.getElementById('profile-setup').classList.remove('show');
+  document.getElementById('prof-overlay').classList.remove('on');
   updateHeroProfile();
   renderHome();
 }
@@ -1596,6 +1597,7 @@ const EMOJIS=['🎾','🏆','🔥','💪','⚡','👊','😅','🎉','🙌','�
 let emojiIdx=0;
 
 function setCTab(t,el){
+  document.getElementById('profile-setup').classList.remove('show');
   document.querySelectorAll('.ctab').forEach(c=>c.classList.remove('on'));if(el)el.classList.add('on');
   ['feed','friends','teams'].forEach(x=>document.getElementById('ct-'+x).style.display=x===t?'block':'none');
   if(t==='feed')loadFeedPosts();
@@ -2179,6 +2181,7 @@ renderLearn();
       friends = JSON.parse(csGet('cs_friends')||'[]');
       teams = JSON.parse(csGet('cs_teams')||'[]');
       document.getElementById('auth-screen').classList.remove('show');
+      document.getElementById('profile-setup').classList.remove('show');
       updateHeroProfile();
       renderHome();
     } catch(e){}
