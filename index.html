@@ -1037,7 +1037,9 @@ async function apiRouter(action, data) {
   }
 
   if (action === 'get_friends') {
+    // Get friendships where I am the sender
     const sent = await sbFetch(`/rest/v1/friends?user_id=eq.${data.user_id}&select=*,profiles!friends_friend_id_fkey(id,name,avatar_color,avatar_text_color,usta_rating,club)`);
+    // Get friendships where I am the receiver (includes accepted ones from other side)
     const received = await sbFetch(`/rest/v1/friends?friend_id=eq.${data.user_id}&select=*,profiles!friends_user_id_fkey(id,name,avatar_color,avatar_text_color,usta_rating,club)`);
     return { sent: sent||[], received: received||[] };
   }
@@ -1047,10 +1049,16 @@ async function apiRouter(action, data) {
   }
 
   if (action === 'accept_friend') {
+    // Update original request to accepted
     await sbFetch(`/rest/v1/friends?id=eq.${data.request_id}`, 'PATCH', {status:'accepted'});
+    // Create reverse so both users see each other
+    // data.user_id = person accepting, data.friend_id = original sender
     try {
       await sbFetch('/rest/v1/friends', 'POST', {user_id:data.user_id, friend_id:data.friend_id, status:'accepted'});
-    } catch(e){ /* reverse may already exist */ }
+    } catch(e){ 
+      // If reverse already exists, just update it to accepted
+      try { await sbFetch(`/rest/v1/friends?user_id=eq.${data.user_id}&friend_id=eq.${data.friend_id}`, 'PATCH', {status:'accepted'}); } catch(e2){}
+    }
     return {ok:true};
   }
 
@@ -1689,13 +1697,16 @@ async function loadFriends(){
   try {
     const data=await api('get_friends',{user_id:sbUser?.id});
     friends=[];
+    // Sent requests — I am user_id, friend is the other person
     (data.sent||[]).forEach(r=>{
       const p=r.profiles;if(!p)return;
       friends.push({id:r.id,friendId:p.id,name:p.name,init:initials(p.name),bg:p.avatar_color||'#e5f7ed',fg:p.avatar_text_color||'#1a7a40',status:r.status,club:p.club||'',usta:p.usta_rating||''});
     });
+    // Received — I am friend_id, the sender is the other person
     (data.received||[]).forEach(r=>{
       const p=r.profiles;if(!p)return;
-      if(r.status==='pending') friends.push({id:r.id,friendId:p.id,name:p.name,init:initials(p.name),bg:p.avatar_color||'#e5f7ed',fg:p.avatar_text_color||'#1a7a40',status:'incoming',club:p.club||'',usta:p.usta_rating||''});
+      // If accepted, show as friend. If pending, show as incoming request
+      friends.push({id:r.id,friendId:p.id,name:p.name,init:initials(p.name),bg:p.avatar_color||'#e5f7ed',fg:p.avatar_text_color||'#1a7a40',status:r.status==='accepted'?'accepted':'incoming',club:p.club||'',usta:p.usta_rating||''});
     });
     csSet('cs_friends',JSON.stringify(friends));
   } catch(err){ friends=JSON.parse(csGet('cs_friends')||'[]'); }
@@ -1803,9 +1814,9 @@ async function openDM(el){
   let msgs=dmCache[friendId]||[];
   try {
     const data=await api('get_dms',{user_id:sbUser?.id,friend_id:friendId});
-    msgs=(data||[]).map(m=>({mine:m.from_id===sbUser?.id,text:m.body,id:m.id}));
+    msgs=(Array.isArray(data)?data:[]).map(m=>({mine:m.from_id===sbUser?.id,text:m.body,id:m.id}));
     dmCache[friendId]=msgs;
-  } catch(err){}
+  } catch(err){ console.log('DM load err:',err.message); }
   dmCache[friendId]=msgs;
   const firstName=name.split(" ")[0];
   const msgsHTML=msgs.map(m=>`<div class="dm-msg ${m.mine?"mine":""}"><div class="dm-bubble">${m.text}</div></div>`).join("")||`<div class="empty" style="padding:16px 0;"><p>Say hi to ${firstName}! 👋</p></div>`;
