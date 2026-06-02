@@ -1128,9 +1128,13 @@ async function signIn(){
   btn.textContent='Signing in…';btn.disabled=true;
   try {
     const res=await api('signin',{email,password:pass});
-    csSet('cs_token', res.token||res.session?.access_token||'');
-    csSet('cs_refresh', res.session?.refresh_token||res.refresh_token||'');
-    sbUser={id:res.user?.id};
+    const accessToken = res.token||res.access_token||res.session?.access_token||'';
+    const refreshToken = res.refresh_token||res.session?.refresh_token||'';
+    const userId = res.user?.id||res.session?.user?.id||'';
+    csSet('cs_token', accessToken);
+    csSet('cs_refresh', refreshToken);
+    sbUser={id:userId};
+    if(!userId){showAuthErr('Sign in failed — no user ID returned');return;}
     await loadUserData();
     csSet('cs_profile', JSON.stringify(profile));
   } catch(err){
@@ -1749,10 +1753,15 @@ async function searchFriend(){
   const q=document.getElementById('friend-search-inp').value.trim();
   if(!q){return;}
   const el=document.getElementById('friend-search-results');
-  el.innerHTML='<div style="font-size:13px;color:var(--ink3);">Searching…</div>';
+  const token=csGet('cs_token');
+  const uid=sbUser?.id;
+  el.innerHTML=`<div style="font-size:11px;color:var(--ink3);padding:4px 0;">Searching for "${q}"…<br>Token: ${token?'✓':'✗ missing'} · User: ${uid?uid.slice(0,8)+'…':'✗ missing'}</div>`;
   try {
-    const data=await api('search_profiles',{q,exclude_id:sbUser?.id});
-    if(!data||!data.length){el.innerHTML='<div style="font-size:13px;color:var(--ink3);padding:8px 0;">No players found</div>';return;}
+    const data=await api('search_profiles',{q,exclude_id:uid||'none'});
+    if(!data||!data.length){
+      el.innerHTML=`<div style="font-size:13px;color:var(--ink3);padding:8px 0;">No players found for "${q}"<br><span style="font-size:11px;">Try their exact name or username</span></div>`;
+      return;
+    }
     el.innerHTML=data.map(p=>{
       const alreadyFriend=friends.some(f=>f.friendId===p.id);
       return`<div class="friend-row" style="margin-bottom:8px;">
@@ -1761,7 +1770,9 @@ async function searchFriend(){
         ${alreadyFriend?'<span class="accepted-badge">Friends ✓</span>':`<button class="faction-btn" style="background:var(--s-bg1);color:#fff;border-color:var(--s-bg1);" onclick="addFriend(this)" data-id="${p.id}" data-name="${p.name}">Add</button>`}
       </div>`;
     }).join('');
-  } catch(err){ el.innerHTML='<div style="font-size:13px;color:var(--loss-fg);">Search failed — try again</div>'; }
+  } catch(err){
+    el.innerHTML=`<div style="font-size:13px;color:var(--loss-fg);padding:8px 0;">Error: ${err.message}<br><span style="font-size:11px;color:var(--ink3);">Token: ${token?'present':'missing'} · User ID: ${uid||'missing'}</span></div>`;
+  }
 }
 
 async function addFriend(el){
