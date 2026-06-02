@@ -1728,15 +1728,17 @@ async function loadFriends(){
   try {
     const data=await api('get_friends',{user_id:sbUser?.id});
     friends=[];
+    const seen=new Set();
     // Sent requests — I am user_id, friend is the other person
     (data.sent||[]).forEach(r=>{
-      const p=r.profiles;if(!p)return;
+      const p=r.profiles;if(!p||seen.has(p.id))return;
+      seen.add(p.id);
       friends.push({id:r.id,friendId:p.id,name:p.name,init:initials(p.name),bg:p.avatar_color||'#e5f7ed',fg:p.avatar_text_color||'#1a7a40',status:r.status,club:p.club||'',usta:p.usta_rating||''});
     });
     // Received — I am friend_id, the sender is the other person
     (data.received||[]).forEach(r=>{
-      const p=r.profiles;if(!p)return;
-      // If accepted, show as friend. If pending, show as incoming request
+      const p=r.profiles;if(!p||seen.has(p.id))return;
+      seen.add(p.id);
       friends.push({id:r.id,friendId:p.id,name:p.name,init:initials(p.name),bg:p.avatar_color||'#e5f7ed',fg:p.avatar_text_color||'#1a7a40',status:r.status==='accepted'?'accepted':'incoming',club:p.club||'',usta:p.usta_rating||''});
     });
     csSet('cs_friends',JSON.stringify(friends));
