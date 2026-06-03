@@ -951,8 +951,8 @@ async function sbFetch(path, method='GET', body=null, useToken=true) {
     if (!res.ok) throw new Error(data?.message || data?.error_description || data?.msg || data?.error || JSON.stringify(data));
     return data;
   } catch(err) {
-    if(err.message === 'Failed to fetch') {
-      throw new Error('Connection failed — check your internet connection and try again');
+    if(err.message === 'Failed to fetch' || err.name === 'TypeError') {
+      throw new Error('Connection failed — URL: '+SUPA_URL+path.slice(0,30));
     }
     throw err;
   }
@@ -1154,36 +1154,28 @@ function setAuthTab(t){
   document.getElementById('auth-err').classList.remove('show');
 }
 
-async function signIn(){
+function signIn(){
   const email=document.getElementById('ai-email').value.trim().toLowerCase();
   const pass=document.getElementById('ai-pass').value;
   if(!email||!pass){showAuthErr('Please enter email and password');return;}
-  const btn=document.getElementById('signin-btn');if(btn){btn.textContent='Signing in…';btn.disabled=true;}
-  try {
-    const results=await sbFetch(`/rest/v1/profiles?email=eq.${encodeURIComponent(email)}&select=*`,false);
-    if(!results||!results.length){showAuthErr('No account found — please create one');return;}
-    const p=results[0];
-    const hash=btoa(email+':'+pass);
-    if(p.password_hash&&p.password_hash!==hash){showAuthErr('Incorrect password');return;}
-    profile=p;sbUser={id:p.id};
-    csSet('cs_token','local_'+p.id);
-    csSet('cs_profile',JSON.stringify(profile));
-    entries=JSON.parse(csGet('cs_entries')||'[]');
-    posts=JSON.parse(csGet('cs_posts')||'[]');
-    friends=JSON.parse(csGet('cs_friends')||'[]');
-    teams=JSON.parse(csGet('cs_teams')||'[]');
-    document.getElementById('auth-screen').classList.remove('show');
-    document.getElementById('profile-setup').classList.remove('show');
-    updateHeroProfile();renderHome();
-    loadUserData().catch(()=>{});
-  } catch(err){
-    showAuthErr('Sign in failed: '+err.message);
-  } finally {
-    if(btn){btn.textContent='Sign in →';btn.disabled=false;}
-  }
+  const saved=csGet('cs_user_'+email);
+  if(!saved){showAuthErr('No account found — please create one');return;}
+  const p=JSON.parse(saved);
+  if(p.pass&&p.pass!==pass){showAuthErr('Incorrect password');return;}
+  profile=p;sbUser={id:p.id};
+  csSet('cs_token','local_'+p.id);
+  csSet('cs_profile',JSON.stringify(profile));
+  entries=JSON.parse(csGet('cs_entries')||'[]');
+  posts=JSON.parse(csGet('cs_posts')||'[]');
+  friends=JSON.parse(csGet('cs_friends')||'[]');
+  teams=JSON.parse(csGet('cs_teams')||'[]');
+  document.getElementById('auth-screen').classList.remove('show');
+  document.getElementById('profile-setup').classList.remove('show');
+  updateHeroProfile();renderHome();
+  loadUserData().catch(()=>{});
 }
 
-async function signUp(){
+function signUp(){
   const name=document.getElementById('au-name').value.trim();
   const username=document.getElementById('au-username').value.trim().replace('@','');
   const email=document.getElementById('au-email').value.trim().toLowerCase();
@@ -1192,29 +1184,20 @@ async function signUp(){
   const usta=document.getElementById('au-usta').value;
   if(!name||!email||!pass){showAuthErr('Please enter name, email and password');return;}
   if(pass.length<6){showAuthErr('Password must be at least 6 characters');return;}
-  const btn=document.getElementById('signup-btn');if(btn){btn.textContent='Creating…';btn.disabled=true;}
-  try {
-    // Check if already exists
-    const existing=await sbFetch(`/rest/v1/profiles?email=eq.${encodeURIComponent(email)}&select=id`,false);
-    if(existing&&existing.length>0){showAuthErr('Email already registered — please sign in');return;}
-    const id=crypto.randomUUID();
-    const colors=assignColor(name);
-    const hash=btoa(email+':'+pass);
-    const p={id,name,username:username||null,email,password_hash:hash,club:club||null,usta_rating:usta||null,privacy:'public',avatar_color:colors.bg,avatar_text_color:colors.fg};
-    await sbFetch('/rest/v1/profiles','POST',p,false);
-    profile=p;sbUser={id};
-    csSet('cs_token','local_'+id);
-    csSet('cs_profile',JSON.stringify(profile));
-    entries=[];posts=[];friends=[];teams=[];
-    document.getElementById('auth-screen').classList.remove('show');
-    document.getElementById('profile-setup').classList.remove('show');
-    updateHeroProfile();renderHome();
-    showProfileConfirmation();
-  } catch(err){
-    showAuthErr('Error: '+err.message+' ('+SUPA_URL+')');
-  } finally {
-    if(btn){btn.textContent='Create account →';btn.disabled=false;}
-  }
+  const existing=csGet('cs_user_'+email);
+  if(existing){showAuthErr('Email already registered — please sign in');return;}
+  const colors=assignColor(name);
+  const id='u_'+Date.now()+'_'+Math.random().toString(36).slice(2,8);
+  const p={id,name,username:username||null,email,pass,club:club||null,usta_rating:usta||null,privacy:'public',avatar_color:colors.bg,avatar_text_color:colors.fg};
+  csSet('cs_user_'+email, JSON.stringify(p));
+  profile=p;sbUser={id};
+  csSet('cs_token','local_'+id);
+  csSet('cs_profile',JSON.stringify(profile));
+  entries=[];posts=JSON.parse(csGet('cs_posts')||'[]');friends=[];teams=[];
+  document.getElementById('auth-screen').classList.remove('show');
+  document.getElementById('profile-setup').classList.remove('show');
+  updateHeroProfile();renderHome();
+  showProfileConfirmation();
 }
 
 
@@ -2208,6 +2191,22 @@ renderLearn();
   const token = csGet('cs_token');
   const savedProfile = csGet('cs_profile');
   const refresh = csGet('cs_refresh');
+  // Handle local tokens — restore session immediately
+  if(token&&token.startsWith('local_')&&savedProfile){
+    try{
+      profile=JSON.parse(savedProfile);
+      sbUser={id:profile.id};
+      entries=JSON.parse(csGet('cs_entries')||'[]');
+      posts=JSON.parse(csGet('cs_posts')||'[]');
+      friends=JSON.parse(csGet('cs_friends')||'[]');
+      teams=JSON.parse(csGet('cs_teams')||'[]');
+      document.getElementById('auth-screen').classList.remove('show');
+      document.getElementById('profile-setup').classList.remove('show');
+      updateHeroProfile();renderHome();
+      loadUserData().catch(()=>{});
+    }catch(e){document.getElementById('auth-screen').classList.add('show');}
+    return;
+  }
 
   // Always try local profile first — never lock user out
   if(savedProfile){
