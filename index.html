@@ -801,7 +801,10 @@ html,body{height:100%;font-family:var(--font);color:var(--ink);background:var(--
     <div id="comm-feed"></div>
   </div>
   <div id="ct-friends" style="display:none;">
-    <div class="sl" style="margin-bottom:11px;">Your friends at the club</div>
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:11px;">
+      <div class="sl" style="margin-bottom:0;">Your friends at the club</div>
+      <button onclick="loadFriends()" style="background:var(--s-court);color:var(--s-bg1);border:none;border-radius:20px;padding:5px 12px;font-family:var(--font);font-size:11px;font-weight:600;cursor:pointer;">↻ Refresh</button>
+    </div>
     <div id="friends-list"></div>
 
   </div>
@@ -925,13 +928,14 @@ const SUPA_URL = 'https://iresylsjokitxhzsumac.supabase.co';
 const SUPA_ANON = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImlyZXN5bHNqb2tpdHhoenN1bWFjIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Nzk4Mjk0ODAsImV4cCI6MjA5NTQwNTQ4MH0.xUGi-8v1lGQThlnmeJwfstEaGbMnVCF-md-e5ut3YZQ';
 
 async function sbFetch(path, method='GET', body=null, useToken=true) {
-  const token = useToken ? (csGet('cs_token') || SUPA_ANON) : SUPA_ANON;
+  const token = useToken ? (csGet('cs_token')||'') : '';
+  const authKey = token ? token : SUPA_ANON;
   const opts = {
     method,
     headers: {
       'Content-Type': 'application/json',
       'apikey': SUPA_ANON,
-      'Authorization': 'Bearer ' + token,
+      'Authorization': 'Bearer ' + authKey,
       'Prefer': 'return=representation',
       'X-Client-Info': 'courtside-app',
     },
@@ -1351,11 +1355,11 @@ function checkAndCelebrate(prevIds){
 // ── Nav ────────────────────────────────────────────────────────────────────
 let wrChart=null;
 function goLog(){
-  // Open full log page — nav button highlights Log
+  document.getElementById('profile-setup').classList.remove('show');
   document.querySelectorAll('.page').forEach(x=>x.classList.remove('on'));
   document.querySelectorAll('.nb,.nb-plus').forEach(x=>x.classList.remove('on'));
   document.getElementById('p-log').classList.add('on');
-  document.querySelector('.nb-plus').classList.add('on');
+  const plus=document.querySelector('.nb-plus');if(plus)plus.classList.add('on');
   setLogType('match');
   window.scrollTo(0,0);
 }
@@ -1366,7 +1370,7 @@ function go(p,btn){
   document.getElementById('p-'+p).classList.add('on');btn.classList.add('on');
   if(p==='home')renderHome();
   if(p==='activity'){renderActStats();renderHist();}
-  if(p==='community')setCTab('feed',document.querySelector('.ctab'));
+  if(p==='community'){const ct=document.querySelector('.ctab');if(ct)setCTab('feed',ct);else{['feed','friends','teams'].forEach(x=>document.getElementById('ct-'+x).style.display=x==='feed'?'block':'none');loadFeedPosts();}}
   if(p==='improve')renderLearn();
 }
 
@@ -1730,8 +1734,11 @@ async function loadFriends(){
     (data.received||[]).forEach(r=>{
       const p=r.profiles;if(!p||seen.has(p.id))return;
       seen.add(p.id);
-      friends.push({id:r.id,friendId:p.id,name:p.name,init:initials(p.name),bg:p.avatar_color||'#e5f7ed',fg:p.avatar_text_color||'#1a7a40',status:r.status==='accepted'?'accepted':'incoming',club:p.club||'',usta:p.usta_rating||''});
+      // pending = incoming request, accepted = already friends
+      const status=r.status==='accepted'?'accepted':'incoming';
+      friends.push({id:r.id,friendId:p.id,name:p.name,init:initials(p.name),bg:p.avatar_color||'#e5f7ed',fg:p.avatar_text_color||'#1a7a40',status,club:p.club||'',usta:p.usta_rating||''});
     });
+    console.log('Friends loaded — sent:',data.sent?.length,'received:',data.received?.length,'total:',friends.length);
     csSet('cs_friends',JSON.stringify(friends));
   } catch(err){ friends=JSON.parse(csGet('cs_friends')||'[]'); }
   renderFriends();
@@ -1813,11 +1820,22 @@ async function searchFriend(){
 async function addFriend(el){
   const friendId=el.dataset.id,name=el.dataset.name;
   el.textContent='Sending…';el.disabled=true;
+  const myId=sbUser?.id;
+  const myToken=csGet('cs_token');
+  if(!myId||!myToken){
+    showToast('Not logged in — please sign out and sign back in');
+    el.textContent='Add';el.disabled=false;
+    return;
+  }
   try {
-    await api('send_friend_request',{user_id:sbUser?.id,friend_id:friendId});
+    await api('send_friend_request',{user_id:myId,friend_id:friendId});
     showToast('Friend request sent to '+name.split(' ')[0]+'! 🎾');
     await loadFriends();
-  } catch(err){ showToast('Could not send request'); el.textContent='Add'; el.disabled=false; }
+  } catch(err){ 
+    showToast('Error: '+err.message);
+    el.textContent='Add';
+    el.disabled=false;
+  }
 }
 
 async function acceptFriend(el){
