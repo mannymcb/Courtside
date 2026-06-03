@@ -888,6 +888,7 @@ html,body{height:100%;font-family:var(--font);color:var(--ink);background:var(--
 <div class="toast" id="toast"></div>
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
 <script type="module">
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.39.3';
 window.__supabaseCreateClient = createClient;
@@ -949,23 +950,45 @@ async function sbFetch(path, method='GET', body=null, useToken=true) {
   return data;
 }
 
+// Supabase client for auth
+let _sb = null;
+function getSb(){
+  if(_sb) return _sb;
+  if(window.supabase?.createClient){
+    _sb = window.supabase.createClient(SUPA_URL, SUPA_ANON);
+    return _sb;
+  }
+  return null;
+}
+
 async function authFetch(path, method='POST', body=null) {
+  // Try official client first
+  const sb = getSb();
+  if(sb && path.includes('signup') && body?.email){
+    const {data,error} = await sb.auth.signUp({email:body.email, password:body.password});
+    if(error) throw new Error(error.message);
+    return {user:data.user, session:data.session};
+  }
+  if(sb && path.includes('token') && body?.email){
+    const {data,error} = await sb.auth.signInWithPassword({email:body.email, password:body.password});
+    if(error) throw new Error(error.message);
+    return {user:data.user, access_token:data.session?.access_token, refresh_token:data.session?.refresh_token, session:data.session};
+  }
+  if(sb && path.includes('refresh_token') && body?.refresh_token){
+    const {data,error} = await sb.auth.refreshSession({refresh_token:body.refresh_token});
+    if(error) throw new Error(error.message);
+    return {access_token:data.session?.access_token, refresh_token:data.session?.refresh_token};
+  }
+  // Fallback to direct fetch
   const res = await fetch(SUPA_URL + path, {
     method,
-    headers: { 
-      'Content-Type': 'application/json', 
-      'apikey': SUPA_ANON,
-      'Authorization': 'Bearer ' + SUPA_ANON,
-    },
+    headers: {'Content-Type':'application/json','apikey':SUPA_ANON,'Authorization':'Bearer '+SUPA_ANON},
     body: body ? JSON.stringify(body) : null,
   });
   const text = await res.text();
   let data;
   try { data = JSON.parse(text); } catch { data = {msg:text}; }
-  if (!res.ok) {
-    const msg = data?.msg || data?.message || data?.error_description || data?.error || JSON.stringify(data);
-    throw new Error(msg);
-  }
+  if(!res.ok) throw new Error(data?.msg||data?.message||data?.error_description||JSON.stringify(data));
   return data;
 }
 
