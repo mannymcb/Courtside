@@ -80,7 +80,7 @@ html,body{height:100%;font-family:var(--font);color:var(--ink);background:var(--
 .empty p{font-size:14px;line-height:1.7;}
 
 /* Persona */
-.persona-card{background:linear-gradient(135deg,#b85010,#d9621a);border-radius:var(--r);padding:16px 18px;margin-bottom:12px;display:flex;align-items:center;gap:14px;position:relative;overflow:hidden;color:#fff!important;}
+.persona-card{background:linear-gradient(135deg,#d9621a,#b8501080);border-radius:var(--r);padding:16px 18px;margin-bottom:12px;display:flex;align-items:center;gap:14px;position:relative;overflow:hidden;color:#fff!important;}
 .persona-card::after{content:'';position:absolute;right:-20px;top:-20px;width:100px;height:100px;border-radius:50%;background:rgba(255,255,255,.05);}
 .persona-emoji{font-size:38px;flex-shrink:0;}
 .persona-label{font-size:10px;font-weight:700;letter-spacing:.8px;text-transform:uppercase;color:rgba(255,255,255,.75);margin-bottom:3px;}
@@ -1385,8 +1385,8 @@ function renderHome(){
   if(persona){
     pc.style.display='flex';
     const s=getSeason();const seas=SEASONS[s];
-    pc.style.background=`linear-gradient(135deg,${seas.bg1},${seas.bg2})`;
-    pc.innerHTML=`<div style="font-size:38px;flex-shrink:0;">${persona.emoji}</div><div><div style="font-size:10px;font-weight:700;letter-spacing:.8px;text-transform:uppercase;color:rgba(255,255,255,.8);margin-bottom:3px;">Your persona</div><div style="font-size:20px;font-weight:800;color:#fff;letter-spacing:-.3px;">${persona.name}</div><div style="font-size:12px;color:rgba(255,255,255,.9);margin-top:3px;line-height:1.4;">${persona.desc}</div></div>`;
+    pc.style.background=`linear-gradient(135deg,${seas.bg2},${seas.bg1}80)`;
+    pc.innerHTML=`<div style="font-size:38px;flex-shrink:0;">${persona.emoji}</div><div><div style="font-size:18px;font-weight:800;color:#fff;letter-spacing:-.3px;">${persona.name}</div><div style="font-size:12px;color:rgba(255,255,255,.85);margin-top:4px;line-height:1.4;">${persona.desc}</div></div>`;
   } else pc.style.display='none';
   // Week
   const ws=new Date();ws.setDate(ws.getDate()-ws.getDay());const wsStr=ws.toISOString().slice(0,10);
