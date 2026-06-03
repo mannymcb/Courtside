@@ -929,11 +929,7 @@ const SUPA_URL = 'https://iresylsjokitxhzsumac.supabase.co';
 const SUPA_ANON = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImlyZXN5bHNqb2tpdHhoenN1bWFjIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Nzk4Mjk0ODAsImV4cCI6MjA5NTQwNTQ4MH0.xUGi-8v1lGQThlnmeJwfstEaGbMnVCF-md-e5ut3YZQ';
 
 async function sbFetch(path, method='GET', body=null, useToken=true) {
-  const rawToken = csGet('cs_token')||'';
-  // local_ tokens aren't real JWT — use anon key for REST calls
-  const isLocal = rawToken.startsWith('local_');
-  const token = (useToken&&!isLocal) ? rawToken : '';
-  const authKey = token ? token : SUPA_ANON;
+  const authKey = SUPA_ANON;
   const opts = {
     method,
     headers: {
@@ -1173,36 +1169,85 @@ function persist(){
 function initials(n){return(n||'?').split(' ').map(w=>w[0]).join('').slice(0,2).toUpperCase();}
 
 // ── Auth ────────────────────────────────────────────────────────────────────
-function setAuthTab(t){}
 
 function showAuthErr(msg){
   const el=document.getElementById('auth-err');el.textContent=msg;el.classList.add('show');
 }
 
-function signIn(){} // replaced by magic link
+function setAuthTab(t){
+  document.getElementById('at-signin').classList.toggle('on',t==='signin');
+  document.getElementById('at-signup').classList.toggle('on',t==='signup');
+  document.getElementById('auth-signin').style.display=t==='signin'?'block':'none';
+  document.getElementById('auth-signup').style.display=t==='signup'?'block':'none';
+  document.getElementById('auth-err').classList.remove('show');
+}
 
-function signUp(){
+async function signIn(){
+  const email=document.getElementById('ai-email').value.trim().toLowerCase();
+  const pass=document.getElementById('ai-pass').value;
+  if(!email||!pass){showAuthErr('Please enter email and password');return;}
+  const btn=document.getElementById('signin-btn');
+  btn.textContent='Signing in…';btn.disabled=true;
+  try {
+    const results=await sbFetch(`/rest/v1/profiles?email=eq.${encodeURIComponent(email)}&select=*`,false);
+    if(!results||!results.length){showAuthErr('No account found — please create one');return;}
+    const p=results[0];
+    const hash=btoa(email+':'+pass);
+    if(p.password_hash&&p.password_hash!==hash){showAuthErr('Incorrect password');return;}
+    profile=p;sbUser={id:p.id};
+    csSet('cs_token','local_'+p.id);
+    csSet('cs_profile',JSON.stringify(profile));
+    entries=JSON.parse(csGet('cs_entries')||'[]');
+    posts=JSON.parse(csGet('cs_posts')||'[]');
+    friends=JSON.parse(csGet('cs_friends')||'[]');
+    teams=JSON.parse(csGet('cs_teams')||'[]');
+    document.getElementById('auth-screen').classList.remove('show');
+    document.getElementById('profile-setup').classList.remove('show');
+    updateHeroProfile();renderHome();
+    loadUserData().catch(()=>{});
+  } catch(err){
+    showAuthErr('Sign in failed: '+err.message);
+  } finally {
+    btn.textContent='Sign in →';btn.disabled=false;
+  }
+}
+
+async function signUp(){
   const name=document.getElementById('au-name').value.trim();
   const username=document.getElementById('au-username').value.trim().replace('@','');
-  const email=document.getElementById('au-email').value.trim();
+  const email=document.getElementById('au-email').value.trim().toLowerCase();
   const pass=document.getElementById('au-pass').value;
   const club=document.getElementById('au-club').value.trim();
   const usta=document.getElementById('au-usta').value;
-  const privacy=document.getElementById('au-privacy')?.value||'public';
-  const tr=document.getElementById('au-tr')?.value.trim()||'';
   if(!name||!email||!pass){showAuthErr('Please enter name, email and password');return;}
   if(pass.length<6){showAuthErr('Password must be at least 6 characters');return;}
-  const colors=assignColor(name);
-  const id='user_'+Date.now();
-  profile={id,name,username:username||null,email,password:pass,club:club||null,usta_rating:usta||null,privacy,tennis_record_url:tr||null,avatar_color:colors.bg,avatar_text_color:colors.fg,joined:new Date().toISOString()};
-  sbUser={id};
-  csSet('cs_profile',JSON.stringify(profile));
-  document.getElementById('auth-screen').classList.remove('show');
-  
-  updateHeroProfile();
-  renderHome();
-  showProfileConfirmation();
+  const btn=document.getElementById('signup-btn');
+  btn.textContent='Creating…';btn.disabled=true;
+  try {
+    // Check if already exists
+    const existing=await sbFetch(`/rest/v1/profiles?email=eq.${encodeURIComponent(email)}&select=id`,false);
+    if(existing&&existing.length>0){showAuthErr('Email already registered — please sign in');return;}
+    const id=crypto.randomUUID();
+    const colors=assignColor(name);
+    const hash=btoa(email+':'+pass);
+    const p={id,name,username:username||null,email,password_hash:hash,club:club||null,usta_rating:usta||null,privacy:'public',avatar_color:colors.bg,avatar_text_color:colors.fg};
+    await sbFetch('/rest/v1/profiles','POST',p,false);
+    profile=p;sbUser={id};
+    csSet('cs_token','local_'+id);
+    csSet('cs_profile',JSON.stringify(profile));
+    entries=[];posts=[];friends=[];teams=[];
+    document.getElementById('auth-screen').classList.remove('show');
+    document.getElementById('profile-setup').classList.remove('show');
+    updateHeroProfile();renderHome();
+    showProfileConfirmation();
+  } catch(err){
+    showAuthErr('Sign up failed: '+err.message);
+  } finally {
+    btn.textContent='Create account →';btn.disabled=false;
+  }
 }
+
+
 
 function assignColor(name){
   const colors=[
@@ -2190,46 +2235,6 @@ renderLearn();
 
 // Check existing Supabase session
 (async()=>{
-  // Check for magic link token in URL hash
-  const hash = window.location.hash;
-  if(hash&&hash.includes('access_token')){
-    const params = new URLSearchParams(hash.slice(1));
-    const accessToken = params.get('access_token');
-    const refreshToken = params.get('refresh_token');
-    if(accessToken){
-      csSet('cs_token', accessToken);
-      csSet('cs_refresh', refreshToken||'');
-      // Get user from token
-      try {
-        const userRes = await fetch(SUPA_URL+'/auth/v1/user',{
-          headers:{'apikey':SUPA_ANON,'Authorization':'Bearer '+accessToken}
-        });
-        const userData = await userRes.json();
-        if(userData?.id){
-          sbUser={id:userData.id};
-          // Check if profile exists
-          const profs = await sbFetch(`/rest/v1/profiles?id=eq.${userData.id}&select=*`);
-          if(profs&&profs.length){
-            profile=profs[0];
-            csSet('cs_profile',JSON.stringify(profile));
-            await loadUserData();
-          } else {
-            // New user — show profile setup
-            csSet('cs_profile', JSON.stringify({id:userData.id,email:userData.email}));
-            profile={id:userData.id,email:userData.email};
-            document.getElementById('auth-screen').classList.add('show');
-            document.getElementById('auth-step1').style.display='none';
-            document.getElementById('auth-step2').style.display='none';
-            document.getElementById('auth-setup').style.display='block';
-          }
-          // Clear hash from URL
-          history.replaceState(null,null,' ');
-          return;
-        }
-      } catch(e){}
-    }
-  }
-
   const token = csGet('cs_token');
   const savedProfile = csGet('cs_profile');
   const refresh = csGet('cs_refresh');
