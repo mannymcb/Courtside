@@ -929,24 +929,33 @@ const SUPA_URL = 'https://iresylsjokitxhzsumac.supabase.co';
 const SUPA_ANON = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImlyZXN5bHNqb2tpdHhoenN1bWFjIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Nzk4Mjk0ODAsImV4cCI6MjA5NTQwNTQ4MH0.xUGi-8v1lGQThlnmeJwfstEaGbMnVCF-md-e5ut3YZQ';
 
 async function sbFetch(path, method='GET', body=null, useToken=true) {
-  const authKey = SUPA_ANON;
+  const token = csGet('cs_token')||'';
+  const isLocal = token.startsWith('local_');
+  const authKey = (!isLocal && token) ? token : SUPA_ANON;
   const opts = {
     method,
+    mode: 'cors',
     headers: {
       'Content-Type': 'application/json',
       'apikey': SUPA_ANON,
       'Authorization': 'Bearer ' + authKey,
       'Prefer': 'return=representation',
-      'X-Client-Info': 'courtside-app',
     },
   };
   if (body) opts.body = JSON.stringify(body);
-  const res = await fetch(SUPA_URL + path, opts);
-  const text = await res.text();
-  let data;
-  try { data = JSON.parse(text); } catch { data = text; }
-  if (!res.ok) throw new Error(data?.message || data?.error_description || data?.msg || 'Request failed');
-  return data;
+  try {
+    const res = await fetch(SUPA_URL + path, opts);
+    const text = await res.text();
+    let data;
+    try { data = JSON.parse(text); } catch { data = text; }
+    if (!res.ok) throw new Error(data?.message || data?.error_description || data?.msg || data?.error || JSON.stringify(data));
+    return data;
+  } catch(err) {
+    if(err.message === 'Failed to fetch') {
+      throw new Error('Connection failed — check your internet connection and try again');
+    }
+    throw err;
+  }
 }
 
 // Auth via direct fetch
@@ -1202,7 +1211,7 @@ async function signUp(){
     updateHeroProfile();renderHome();
     showProfileConfirmation();
   } catch(err){
-    showAuthErr('Sign up failed: '+err.message);
+    showAuthErr('Error: '+err.message+' ('+SUPA_URL+')');
   } finally {
     if(btn){btn.textContent='Create account →';btn.disabled=false;}
   }
