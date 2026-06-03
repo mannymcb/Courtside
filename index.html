@@ -1382,8 +1382,12 @@ function renderHome(){
   // Persona
   const persona=getPersona();
   const pc=document.getElementById('persona-card');
-  if(persona){pc.style.display='flex';pc.innerHTML=`<div class="persona-emoji">${persona.emoji}</div><div><div class="persona-label">Your persona</div><div class="persona-name">${persona.name}</div><div class="persona-desc">${persona.desc}</div></div>`;}
-  else pc.style.display='none';
+  if(persona){
+    pc.style.display='flex';
+    const s=getSeason();const seas=SEASONS[s];
+    pc.style.background=`linear-gradient(135deg,${seas.bg1},${seas.bg2})`;
+    pc.innerHTML=`<div style="font-size:38px;flex-shrink:0;">${persona.emoji}</div><div><div style="font-size:10px;font-weight:700;letter-spacing:.8px;text-transform:uppercase;color:rgba(255,255,255,.8);margin-bottom:3px;">Your persona</div><div style="font-size:20px;font-weight:800;color:#fff;letter-spacing:-.3px;">${persona.name}</div><div style="font-size:12px;color:rgba(255,255,255,.9);margin-top:3px;line-height:1.4;">${persona.desc}</div></div>`;
+  } else pc.style.display='none';
   // Week
   const ws=new Date();ws.setDate(ws.getDate()-ws.getDay());const wsStr=ws.toISOString().slice(0,10);
   const we=entries.filter(e=>e.date>=wsStr);
