@@ -483,7 +483,7 @@ html,body{height:100%;font-family:var(--font);color:var(--ink);background:var(--
     <div id="auth-signin">
       <div class="auth-field"><label>Email</label><input id="ai-email" type="email" placeholder="you@email.com" autocomplete="email"></div>
       <div class="auth-field"><label>Password</label><input id="ai-pass" type="password" placeholder="Your password" autocomplete="current-password"></div>
-      <button class="auth-btn" onclick="signIn()">Sign in →</button>
+      <button class="auth-btn" id="signin-btn" onclick="signIn()">Sign in →</button>
     </div>
     <div id="auth-signup" style="display:none;">
       <div class="auth-field"><label>Your name</label><input id="au-name" type="text" placeholder="First name" autocomplete="given-name"></div>
@@ -513,7 +513,7 @@ html,body{height:100%;font-family:var(--font);color:var(--ink);background:var(--
         </a>
         <input id="au-tr" type="url" placeholder="Paste your TennisRecord URL" style="width:100%;font-family:var(--font);font-size:14px;color:var(--ink);background:#fff;border:1.5px solid var(--border);border-radius:var(--rsm);padding:10px 12px;outline:none;margin-top:8px;">
       </div>
-      <button class="auth-btn" onclick="signUp()">Create account →</button>
+      <button class="auth-btn" id="signup-btn" onclick="signUp()">Create account →</button>
     </div>
     <div class="auth-err" id="auth-err"></div>
   </div>
@@ -949,47 +949,10 @@ async function sbFetch(path, method='GET', body=null, useToken=true) {
   return data;
 }
 
-// Supabase client for auth
-let _sb = null;
-function getSb(){
-  if(_sb) return _sb;
-  if(window.supabase?.createClient){
-    _sb = window.supabase.createClient(SUPA_URL, SUPA_ANON);
-    return _sb;
-  }
-  return null;
-}
+// Auth via direct fetch
 
-async function authFetch(path, method='POST', body=null) {
-  // Try official client first
-  const sb = getSb();
-  if(sb && path.includes('signup') && body?.email){
-    const {data,error} = await sb.auth.signUp({email:body.email, password:body.password});
-    if(error) throw new Error(error.message);
-    return {user:data.user, session:data.session};
-  }
-  if(sb && path.includes('token') && body?.email){
-    const {data,error} = await sb.auth.signInWithPassword({email:body.email, password:body.password});
-    if(error) throw new Error(error.message);
-    return {user:data.user, access_token:data.session?.access_token, refresh_token:data.session?.refresh_token, session:data.session};
-  }
-  if(sb && path.includes('refresh_token') && body?.refresh_token){
-    const {data,error} = await sb.auth.refreshSession({refresh_token:body.refresh_token});
-    if(error) throw new Error(error.message);
-    return {access_token:data.session?.access_token, refresh_token:data.session?.refresh_token};
-  }
-  // Fallback to direct fetch
-  const res = await fetch(SUPA_URL + path, {
-    method,
-    headers: {'Content-Type':'application/json','apikey':SUPA_ANON,'Authorization':'Bearer '+SUPA_ANON},
-    body: body ? JSON.stringify(body) : null,
-  });
-  const text = await res.text();
-  let data;
-  try { data = JSON.parse(text); } catch { data = {msg:text}; }
-  if(!res.ok) throw new Error(data?.msg||data?.message||data?.error_description||JSON.stringify(data));
-  return data;
-}
+
+
 
 // Compatibility shim so all api() calls still work
 function isValidUUID(str){
@@ -1186,8 +1149,7 @@ async function signIn(){
   const email=document.getElementById('ai-email').value.trim().toLowerCase();
   const pass=document.getElementById('ai-pass').value;
   if(!email||!pass){showAuthErr('Please enter email and password');return;}
-  const btn=document.getElementById('signin-btn');
-  btn.textContent='Signing in…';btn.disabled=true;
+  const btn=document.getElementById('signin-btn');if(btn){btn.textContent='Signing in…';btn.disabled=true;}
   try {
     const results=await sbFetch(`/rest/v1/profiles?email=eq.${encodeURIComponent(email)}&select=*`,false);
     if(!results||!results.length){showAuthErr('No account found — please create one');return;}
@@ -1208,7 +1170,7 @@ async function signIn(){
   } catch(err){
     showAuthErr('Sign in failed: '+err.message);
   } finally {
-    btn.textContent='Sign in →';btn.disabled=false;
+    if(btn){btn.textContent='Sign in →';btn.disabled=false;}
   }
 }
 
@@ -1221,8 +1183,7 @@ async function signUp(){
   const usta=document.getElementById('au-usta').value;
   if(!name||!email||!pass){showAuthErr('Please enter name, email and password');return;}
   if(pass.length<6){showAuthErr('Password must be at least 6 characters');return;}
-  const btn=document.getElementById('signup-btn');
-  btn.textContent='Creating…';btn.disabled=true;
+  const btn=document.getElementById('signup-btn');if(btn){btn.textContent='Creating…';btn.disabled=true;}
   try {
     // Check if already exists
     const existing=await sbFetch(`/rest/v1/profiles?email=eq.${encodeURIComponent(email)}&select=id`,false);
@@ -1243,7 +1204,7 @@ async function signUp(){
   } catch(err){
     showAuthErr('Sign up failed: '+err.message);
   } finally {
-    btn.textContent='Create account →';btn.disabled=false;
+    if(btn){btn.textContent='Create account →';btn.disabled=false;}
   }
 }
 
