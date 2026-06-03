@@ -952,13 +952,20 @@ async function sbFetch(path, method='GET', body=null, useToken=true) {
 async function authFetch(path, method='POST', body=null) {
   const res = await fetch(SUPA_URL + path, {
     method,
-    headers: { 'Content-Type': 'application/json', 'apikey': SUPA_ANON },
+    headers: { 
+      'Content-Type': 'application/json', 
+      'apikey': SUPA_ANON,
+      'Authorization': 'Bearer ' + SUPA_ANON,
+    },
     body: body ? JSON.stringify(body) : null,
   });
   const text = await res.text();
   let data;
-  try { data = JSON.parse(text); } catch { data = text; }
-  if (!res.ok) throw new Error(data?.msg || data?.message || data?.error_description || 'Auth failed');
+  try { data = JSON.parse(text); } catch { data = {msg:text}; }
+  if (!res.ok) {
+    const msg = data?.msg || data?.message || data?.error_description || data?.error || JSON.stringify(data);
+    throw new Error(msg);
+  }
   return data;
 }
 
