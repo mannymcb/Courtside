@@ -929,7 +929,10 @@ const SUPA_URL = 'https://iresylsjokitxhzsumac.supabase.co';
 const SUPA_ANON = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImlyZXN5bHNqb2tpdHhoenN1bWFjIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Nzk4Mjk0ODAsImV4cCI6MjA5NTQwNTQ4MH0.xUGi-8v1lGQThlnmeJwfstEaGbMnVCF-md-e5ut3YZQ';
 
 async function sbFetch(path, method='GET', body=null, useToken=true) {
-  const token = useToken ? (csGet('cs_token')||'') : '';
+  const rawToken = csGet('cs_token')||'';
+  // local_ tokens aren't real JWT — use anon key for REST calls
+  const isLocal = rawToken.startsWith('local_');
+  const token = (useToken&&!isLocal) ? rawToken : '';
   const authKey = token ? token : SUPA_ANON;
   const opts = {
     method,
@@ -1183,24 +1186,26 @@ function showAuthErr(msg){
 }
 
 async function signIn(){
-  const email=document.getElementById('ai-email').value.trim();
+  const email=document.getElementById('ai-email').value.trim().toLowerCase();
   const pass=document.getElementById('ai-pass').value;
   if(!email||!pass){showAuthErr('Please enter email and password');return;}
   const btn=document.querySelector('#auth-signin .auth-btn');
   btn.textContent='Signing in…';btn.disabled=true;
   try {
-    const res=await api('signin',{email,password:pass});
-    const accessToken = res.token||res.access_token||res.session?.access_token||'';
-    const refreshToken = res.refresh_token||res.session?.refresh_token||'';
-    const userId = res.user?.id||res.session?.user?.id||'';
-    csSet('cs_token', accessToken);
-    csSet('cs_refresh', refreshToken);
-    sbUser={id:userId};
-    if(!userId){showAuthErr('Sign in failed — no user ID returned');return;}
+    // Look up profile by email and password hash
+    const hash=btoa(email+':'+pass);
+    const results=await sbFetch(`/rest/v1/profiles?email=eq.${encodeURIComponent(email)}&select=*`,false);
+    if(!results||!results.length){showAuthErr('Email not found — please create an account');btn.textContent='Sign in →';btn.disabled=false;return;}
+    const p=results[0];
+    if(p.password_hash&&p.password_hash!==hash){showAuthErr('Incorrect password');btn.textContent='Sign in →';btn.disabled=false;return;}
+    profile=p;sbUser={id:p.id};
+    csSet('cs_token','local_'+p.id);
+    csSet('cs_profile',JSON.stringify(profile));
+    entries=[];posts=[];friends=[];teams=[];
     await loadUserData();
-    csSet('cs_profile', JSON.stringify(profile));
+    document.getElementById('auth-screen').classList.remove('show');
   } catch(err){
-    showAuthErr(err.message||'Sign in failed');
+    showAuthErr('Sign in failed: '+err.message);
   } finally {
     btn.textContent='Sign in →';btn.disabled=false;
   }
@@ -2216,8 +2221,26 @@ renderLearn();
 // Check existing Supabase session
 (async()=>{
   const token = csGet('cs_token');
-  const refresh = csGet('cs_refresh');
   const savedProfile = csGet('cs_profile');
+  // Handle local auth tokens
+  if(token&&token.startsWith('local_')&&savedProfile){
+    try {
+      profile=JSON.parse(savedProfile);
+      sbUser={id:profile.id};
+      entries=JSON.parse(csGet('cs_entries')||'[]');
+      posts=JSON.parse(csGet('cs_posts')||'[]');
+      friends=JSON.parse(csGet('cs_friends')||'[]');
+      teams=JSON.parse(csGet('cs_teams')||'[]');
+      document.getElementById('auth-screen').classList.remove('show');
+      document.getElementById('profile-setup').classList.remove('show');
+      updateHeroProfile();
+      renderHome();
+      // Load fresh data in background
+      loadUserData().catch(()=>{});
+    } catch(e){ document.getElementById('auth-screen').classList.add('show'); }
+    return;
+  }
+  const refresh = csGet('cs_refresh');
 
   // Always try local profile first — never lock user out
   if(savedProfile){
