@@ -1173,43 +1173,13 @@ function persist(){
 function initials(n){return(n||'?').split(' ').map(w=>w[0]).join('').slice(0,2).toUpperCase();}
 
 // ── Auth ────────────────────────────────────────────────────────────────────
-function setAuthTab(t){
-  document.getElementById('at-signin').classList.toggle('on',t==='signin');
-  document.getElementById('at-signup').classList.toggle('on',t==='signup');
-  document.getElementById('auth-signin').style.display=t==='signin'?'block':'none';
-  document.getElementById('auth-signup').style.display=t==='signup'?'block':'none';
-  document.getElementById('auth-err').classList.remove('show');
-}
+function setAuthTab(t){}
 
 function showAuthErr(msg){
   const el=document.getElementById('auth-err');el.textContent=msg;el.classList.add('show');
 }
 
-async function signIn(){
-  const email=document.getElementById('ai-email').value.trim().toLowerCase();
-  const pass=document.getElementById('ai-pass').value;
-  if(!email||!pass){showAuthErr('Please enter email and password');return;}
-  const btn=document.querySelector('#auth-signin .auth-btn');
-  btn.textContent='Signing in…';btn.disabled=true;
-  try {
-    // Look up profile by email and password hash
-    const hash=btoa(email+':'+pass);
-    const results=await sbFetch(`/rest/v1/profiles?email=eq.${encodeURIComponent(email)}&select=*`,false);
-    if(!results||!results.length){showAuthErr('Email not found — please create an account');btn.textContent='Sign in →';btn.disabled=false;return;}
-    const p=results[0];
-    if(p.password_hash&&p.password_hash!==hash){showAuthErr('Incorrect password');btn.textContent='Sign in →';btn.disabled=false;return;}
-    profile=p;sbUser={id:p.id};
-    csSet('cs_token','local_'+p.id);
-    csSet('cs_profile',JSON.stringify(profile));
-    entries=[];posts=[];friends=[];teams=[];
-    await loadUserData();
-    document.getElementById('auth-screen').classList.remove('show');
-  } catch(err){
-    showAuthErr('Sign in failed: '+err.message);
-  } finally {
-    btn.textContent='Sign in →';btn.disabled=false;
-  }
-}
+function signIn(){} // replaced by magic link
 
 function signUp(){
   const name=document.getElementById('au-name').value.trim();
@@ -2220,26 +2190,48 @@ renderLearn();
 
 // Check existing Supabase session
 (async()=>{
+  // Check for magic link token in URL hash
+  const hash = window.location.hash;
+  if(hash&&hash.includes('access_token')){
+    const params = new URLSearchParams(hash.slice(1));
+    const accessToken = params.get('access_token');
+    const refreshToken = params.get('refresh_token');
+    if(accessToken){
+      csSet('cs_token', accessToken);
+      csSet('cs_refresh', refreshToken||'');
+      // Get user from token
+      try {
+        const userRes = await fetch(SUPA_URL+'/auth/v1/user',{
+          headers:{'apikey':SUPA_ANON,'Authorization':'Bearer '+accessToken}
+        });
+        const userData = await userRes.json();
+        if(userData?.id){
+          sbUser={id:userData.id};
+          // Check if profile exists
+          const profs = await sbFetch(`/rest/v1/profiles?id=eq.${userData.id}&select=*`);
+          if(profs&&profs.length){
+            profile=profs[0];
+            csSet('cs_profile',JSON.stringify(profile));
+            await loadUserData();
+          } else {
+            // New user — show profile setup
+            csSet('cs_profile', JSON.stringify({id:userData.id,email:userData.email}));
+            profile={id:userData.id,email:userData.email};
+            document.getElementById('auth-screen').classList.add('show');
+            document.getElementById('auth-step1').style.display='none';
+            document.getElementById('auth-step2').style.display='none';
+            document.getElementById('auth-setup').style.display='block';
+          }
+          // Clear hash from URL
+          history.replaceState(null,null,' ');
+          return;
+        }
+      } catch(e){}
+    }
+  }
+
   const token = csGet('cs_token');
   const savedProfile = csGet('cs_profile');
-  // Handle local auth tokens
-  if(token&&token.startsWith('local_')&&savedProfile){
-    try {
-      profile=JSON.parse(savedProfile);
-      sbUser={id:profile.id};
-      entries=JSON.parse(csGet('cs_entries')||'[]');
-      posts=JSON.parse(csGet('cs_posts')||'[]');
-      friends=JSON.parse(csGet('cs_friends')||'[]');
-      teams=JSON.parse(csGet('cs_teams')||'[]');
-      document.getElementById('auth-screen').classList.remove('show');
-      document.getElementById('profile-setup').classList.remove('show');
-      updateHeroProfile();
-      renderHome();
-      // Load fresh data in background
-      loadUserData().catch(()=>{});
-    } catch(e){ document.getElementById('auth-screen').classList.add('show'); }
-    return;
-  }
   const refresh = csGet('cs_refresh');
 
   // Always try local profile first — never lock user out
