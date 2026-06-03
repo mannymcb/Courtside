@@ -934,7 +934,6 @@ async function sbFetch(path, method='GET', body=null, useToken=true) {
   const authKey = (!isLocal && token) ? token : SUPA_ANON;
   const opts = {
     method,
-    mode: 'cors',
     headers: {
       'Content-Type': 'application/json',
       'apikey': SUPA_ANON,
