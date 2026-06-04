@@ -232,6 +232,7 @@ html, body { height: 100%; font-family: var(--font); background: var(--page); co
 </head>
 <body>
 <div id="app">
+  <div id="loading-state" style="display:none;position:fixed;inset:0;background:var(--page);z-index:600;display:flex;align-items:center;justify-content:center;font-size:14px;color:var(--ink3);font-family:var(--font);"></div>
 
   <!-- AUTH SCREEN -->
   <div id="auth-screen" class="show">
@@ -279,31 +280,13 @@ html, body { height: 100%; font-family: var(--font); background: var(--page); co
       <h2>Set up your profile</h2>
       <p>Tell us a little about yourself</p>
     </div>
-    <div class="setup-body">
-      <div class="setup-field"><label>Full name</label><input id="ps-name" type="text" placeholder="Your name" autocomplete="name"></div>
-      <div class="setup-field"><label>Username</label><input id="ps-username" type="text" placeholder="@yourname"></div>
-      <div class="setup-field"><label>Home club</label><input id="ps-club" type="text" placeholder="e.g. Mercer Island CC"></div>
-      <div class="setup-field">
-        <label>USTA rating</label>
-        <select id="ps-usta">
-          <option value="">Not rated / unsure</option>
-          <option>2.5</option><option>3.0</option><option>3.5</option>
-          <option>4.0</option><option>4.5</option><option>5.0</option>
-          <option>5.5</option><option>6.0+</option>
-        </select>
-      </div>
-      <div class="setup-field">
-        <label>Profile visibility</label>
-        <select id="ps-visibility">
-          <option value="public">Public — anyone can find me</option>
-          <option value="private" selected>Private — only me</option>
-        </select>
-      </div>
-      <button class="setup-btn" id="ps-btn" onclick="saveSetup()">Let's play →</button>
-      <div class="setup-err" id="setup-err"></div>
+    <div class="setup-body" id="profile-setup-body">
+      <!-- Rendered dynamically by renderSetup() -->
     </div>
   </div>
 
+  <!-- APP SHELL -->
+  <div id="app-shell" style="display:none;">
   <!-- HERO -->
   <div class="hero">
     <svg class="hero-court" viewBox="0 0 460 114" preserveAspectRatio="none" xmlns="http://www.w3.org/2000/svg">
@@ -400,6 +383,7 @@ html, body { height: 100%; font-family: var(--font); background: var(--page); co
     </div>
   </div>
 
+  </div><!-- /app-shell -->
   <div id="toast"></div>
 </div>
 
@@ -409,17 +393,38 @@ const SUPA_URL = 'https://iresylsjokitxhzsumac.supabase.co';
 const SUPA_ANON = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImlyZXN5bHNqb2tpdHhoenN1bWFjIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Nzk4Mjk0ODAsImV4cCI6MjA5NTQwNTQ4MH0.xUGi-8v1lGQThlnmeJwfstEaGbMnVCF-md-e5ut3YZQ';
 
 // ── State ────────────────────────────────────────────────────────────────────
-let session = null;  // Supabase session {access_token, refresh_token, user}
-let profile = null;  // profiles row
+let session = null;
+let profile = null;
 
-// ── Storage helpers ──────────────────────────────────────────────────────────
-const CS_KEYS = ['cs_session', 'cs_profile'];
+// ── Storage ───────────────────────────────────────────────────────────────────
 function store(k, v) { try { localStorage.setItem(k, JSON.stringify(v)); } catch(e) {} }
 function load(k) { try { const v = localStorage.getItem(k); return v ? JSON.parse(v) : null; } catch(e) { return null; } }
-function clearSession() { CS_KEYS.forEach(k => localStorage.removeItem(k)); }
+function resetApp() {
+  ['cs_session','cs_profile'].forEach(k => localStorage.removeItem(k));
+  session = null; profile = null;
+  location.reload();
+}
 
-// ── Supabase fetch ────────────────────────────────────────────────────────────
-async function sb(path, method = 'GET', body = null) {
+// ── Screen management ────────────────────────────────────────────────────────
+const SCREENS = ['auth-screen','profile-setup','app-shell'];
+function showScreen(name) {
+  console.log('[Courtside] showScreen:', name);
+  document.getElementById('auth-screen').classList.toggle('show', name === 'auth-screen');
+  document.getElementById('profile-setup').classList.toggle('show', name === 'profile-setup');
+  document.getElementById('app-shell').style.display = name === 'app-shell' ? 'block' : 'none';
+}
+
+function showLoading(msg) {
+  const el = document.getElementById('loading-state');
+  if (el) { el.textContent = msg || 'Loading…'; el.style.display = 'block'; }
+}
+function hideLoading() {
+  const el = document.getElementById('loading-state');
+  if (el) el.style.display = 'none';
+}
+
+// ── Supabase REST fetch ───────────────────────────────────────────────────────
+async function sbFetch(path, method = 'GET', body = null) {
   const token = session?.access_token || SUPA_ANON;
   const res = await fetch(SUPA_URL + path, {
     method,
@@ -435,7 +440,9 @@ async function sb(path, method = 'GET', body = null) {
   let data;
   try { data = JSON.parse(text); } catch { data = text; }
   if (!res.ok) {
-    const msg = data?.message || data?.msg || data?.error_description || data?.error || 'Request failed';
+    const msg = (typeof data === 'object')
+      ? (data.message || data.msg || data.error_description || data.error || JSON.stringify(data))
+      : String(data);
     throw new Error(msg);
   }
   return data;
@@ -477,9 +484,10 @@ async function signIn() {
     const data = await sbAuth('/auth/v1/token?grant_type=password', { email, password: pass });
     session = { access_token: data.access_token, refresh_token: data.refresh_token, user: data.user };
     store('cs_session', session);
-    await loadProfile();
+    console.log('[Courtside] signed in, user id:', session.user?.id);
+    await fetchAndRouteProfile();
   } catch(err) {
-    setAuthErr(err.message || 'Sign in failed. Check your email and password.');
+    setAuthErr(err.message || 'Sign in failed.');
   } finally {
     btn.textContent = 'Sign in →'; btn.disabled = false;
   }
@@ -499,7 +507,8 @@ async function signUp() {
     if (!token || !user?.id) throw new Error('Account created — please sign in with your email and password.');
     session = { access_token: token, refresh_token: data.refresh_token || data.session?.refresh_token, user };
     store('cs_session', session);
-    await loadProfile();
+    console.log('[Courtside] signed up, user id:', session.user?.id);
+    await fetchAndRouteProfile();
   } catch(err) {
     setAuthErr(err.message || 'Sign up failed.');
   } finally {
@@ -510,59 +519,99 @@ async function signUp() {
 function forgotPassword() {
   const email = document.getElementById('si-email').value.trim();
   if (!email) { setAuthErr('Enter your email first.'); return; }
-  sbAuth('/auth/v1/recover', { email }).then(() => {
-    setAuthErr('');
-    showToast('Reset email sent — check your inbox');
-  }).catch(e => setAuthErr(e.message));
+  sbAuth('/auth/v1/recover', { email })
+    .then(() => showToast('Reset email sent — check your inbox'))
+    .catch(e => setAuthErr(e.message));
 }
 
 function signOut() {
-  session = null; profile = null;
-  clearSession();
-  closeProfile();
-  document.getElementById('auth-screen').classList.add('show');
-  document.getElementById('hero-name').textContent = '—';
-  document.getElementById('hero-sub').textContent = '';
-  setTab('signin');
+  resetApp();
 }
 
-// ── Profile ───────────────────────────────────────────────────────────────────
-async function loadProfile() {
+// ── Profile routing ───────────────────────────────────────────────────────────
+// This is the single source of truth for what screen to show after auth.
+async function fetchAndRouteProfile() {
   const uid = session?.user?.id;
-  if (!uid) return;
+  console.log('[Courtside] fetchAndRouteProfile — user id:', uid);
+  if (!uid) { showScreen('auth-screen'); return; }
+
+  showLoading('Loading your profile…');
   try {
-    const rows = await sb(`/rest/v1/profiles?id=eq.${uid}&select=*`);
-    if (rows && rows.length) {
+    // Use maybeSingle pattern: get array, take first or null
+    const rows = await sbFetch(`/rest/v1/profiles?id=eq.${uid}&select=*&limit=1`);
+    console.log('[Courtside] profile fetch result:', rows);
+
+    if (Array.isArray(rows) && rows.length > 0 && rows[0].full_name) {
+      // Profile exists and has a name — show app
       profile = rows[0];
       store('cs_profile', profile);
-      showApp();
+      hideLoading();
+      console.log('[Courtside] rendering: app-shell');
+      showScreen('app-shell');
+      updateHero();
     } else {
-      // New user — show profile setup
-      showSetup();
+      // No profile or incomplete — show setup
+      hideLoading();
+      console.log('[Courtside] rendering: profile-setup');
+      showScreen('profile-setup');
+      renderSetup(uid);
     }
   } catch(err) {
-    // If profile load fails, check local cache
-    const cached = load('cs_profile');
-    if (cached && cached.id === uid) {
-      profile = cached;
-      showApp();
-    } else {
-      showSetup();
-    }
+    hideLoading();
+    console.error('[Courtside] profile fetch error:', err.message);
+    renderProfileError(err.message);
   }
 }
 
-function showSetup() {
-  document.getElementById('auth-screen').classList.remove('show');
-  document.getElementById('profile-setup').classList.add('show');
+// ── Profile setup ─────────────────────────────────────────────────────────────
+function renderSetup(uid) {
+  // Render setup with all required fields, sign out, and reset buttons
+  document.getElementById('profile-setup-body').innerHTML = `
+    <div class="setup-field">
+      <label>Full name <span style="color:#e74c3c;">*</span></label>
+      <input id="ps-name" type="text" placeholder="Your name" autocomplete="name">
+    </div>
+    <div class="setup-field">
+      <label>Username</label>
+      <input id="ps-username" type="text" placeholder="@yourname">
+    </div>
+    <div class="setup-field">
+      <label>Home club</label>
+      <input id="ps-club" type="text" placeholder="e.g. Mercer Island CC">
+    </div>
+    <div class="setup-field">
+      <label>USTA rating</label>
+      <select id="ps-usta">
+        <option value="">Not rated / unsure</option>
+        <option>2.5</option><option>3.0</option><option>3.5</option>
+        <option>4.0</option><option>4.5</option><option>5.0</option>
+        <option>5.5</option><option>6.0+</option>
+      </select>
+    </div>
+    <div class="setup-field">
+      <label>Profile visibility</label>
+      <select id="ps-visibility">
+        <option value="public">Public — anyone can find me</option>
+        <option value="private" selected>Private — only me</option>
+      </select>
+    </div>
+    <div id="setup-err" class="setup-err"></div>
+    <button class="setup-btn" id="ps-btn" onclick="saveSetup('${uid}')">Save profile →</button>
+    <button onclick="signOut()" style="width:100%;background:transparent;border:1.5px solid #e74c3c;border-radius:14px;padding:11px;font-family:var(--font);font-size:13px;font-weight:600;cursor:pointer;color:#e74c3c;margin-top:8px;">Sign out</button>
+    <button onclick="resetApp()" style="width:100%;background:transparent;border:none;font-family:var(--font);font-size:11px;color:#bbb;cursor:pointer;padding:12px 0 0;">Reset app</button>
+  `;
 }
 
-async function saveSetup() {
+async function saveSetup(uid) {
   const name = document.getElementById('ps-name').value.trim();
-  if (!name) { showSetupErr('Please enter your name.'); return; }
+  if (!name) {
+    const err = document.getElementById('setup-err');
+    err.textContent = 'Full name is required.'; err.classList.add('show');
+    return;
+  }
   const btn = document.getElementById('ps-btn');
   btn.textContent = 'Saving…'; btn.disabled = true;
-  const uid = session?.user?.id;
+
   const profileData = {
     id: uid,
     full_name: name,
@@ -571,46 +620,51 @@ async function saveSetup() {
     usta_rating: document.getElementById('ps-usta').value || null,
     profile_visibility: document.getElementById('ps-visibility').value,
   };
+
+  console.log('[Courtside] saving profile:', profileData);
+
   try {
-    const rows = await sb('/rest/v1/profiles', 'POST', profileData);
-    profile = Array.isArray(rows) ? rows[0] : rows;
-    if (!profile || !profile.id) profile = { ...profileData };
+    const rows = await sbFetch('/rest/v1/profiles', 'POST', profileData);
+    profile = (Array.isArray(rows) ? rows[0] : rows) || profileData;
     store('cs_profile', profile);
-    document.getElementById('profile-setup').classList.remove('show');
-    showApp();
+    console.log('[Courtside] profile saved, rendering: app-shell');
+    showScreen('app-shell');
+    updateHero();
     showToast('Welcome to Courtside! 🎾');
   } catch(err) {
-    showSetupErr(err.message || 'Could not save profile.');
-  } finally {
-    btn.textContent = 'Let\'s play →'; btn.disabled = false;
+    console.error('[Courtside] profile save error:', err.message);
+    const errEl = document.getElementById('setup-err');
+    errEl.textContent = 'Save failed: ' + err.message;
+    errEl.classList.add('show');
+    btn.textContent = 'Save profile →'; btn.disabled = false;
   }
 }
 
-function showSetupErr(msg) {
-  const el = document.getElementById('setup-err');
-  el.textContent = msg; el.classList.add('show');
+function renderProfileError(msg) {
+  showScreen('profile-setup');
+  document.getElementById('profile-setup-body').innerHTML = `
+    <div style="background:#fdecea;color:#b03025;border-radius:10px;padding:14px;font-size:13px;margin-bottom:16px;line-height:1.5;">
+      <strong>Could not load profile</strong><br>${msg}
+    </div>
+    <button onclick="fetchAndRouteProfile()" style="width:100%;background:var(--season-bg1);color:#fff;border:none;border-radius:14px;padding:13px;font-family:var(--font);font-size:14px;font-weight:700;cursor:pointer;margin-bottom:10px;">↻ Retry</button>
+    <button onclick="signOut()" style="width:100%;background:transparent;border:1.5px solid #e74c3c;border-radius:14px;padding:11px;font-family:var(--font);font-size:13px;font-weight:600;cursor:pointer;color:#e74c3c;margin-bottom:8px;">Sign out</button>
+    <button onclick="resetApp()" style="width:100%;background:transparent;border:none;font-family:var(--font);font-size:11px;color:#bbb;cursor:pointer;padding:8px 0;">Reset app</button>
+  `;
 }
 
-// ── App ───────────────────────────────────────────────────────────────────────
-function showApp() {
-  document.getElementById('auth-screen').classList.remove('show');
-  document.getElementById('profile-setup').classList.remove('show');
-  updateHero();
-}
-
+// ── App shell ─────────────────────────────────────────────────────────────────
 function updateHero() {
   if (!profile) return;
   const name = profile.full_name || profile.name || '—';
   const club = profile.home_club || profile.club || '';
   const username = profile.username || '';
   document.getElementById('hero-name').textContent = name;
-  const subParts = [];
-  if (username) subParts.push('@' + username);
-  if (club) subParts.push(club);
-  document.getElementById('hero-sub').textContent = subParts.join(' · ');
-  // Update club page title
+  const parts = [];
+  if (username) parts.push('@' + username);
+  if (club) parts.push(club);
+  document.getElementById('hero-sub').textContent = parts.join(' · ');
   const clubTitle = document.getElementById('club-page-title');
-  if (clubTitle && club) clubTitle.textContent = club + ' — coming in v0.4';
+  if (clubTitle) clubTitle.textContent = (club || 'Club') + ' — coming in v0.4';
 }
 
 function goPage(p, btn) {
@@ -629,8 +683,6 @@ function openProfile() {
   const club = profile.home_club || '';
   const usta = profile.usta_rating || '';
   const vis = profile.profile_visibility || 'private';
-  const avColor = profile.avatar_color || '#e5f7ed';
-  const avText = profile.avatar_text_color || '#1a7a40';
   const ini = (name || '?').split(' ').map(w => w[0]).join('').slice(0, 2).toUpperCase();
 
   document.getElementById('prof-body').innerHTML = `
@@ -646,7 +698,7 @@ function openProfile() {
     </div>
     <div style="border-top:1px solid var(--border);padding-top:16px;margin-top:4px;">
       <div style="font-size:11px;font-weight:700;letter-spacing:.6px;text-transform:uppercase;color:var(--ink3);margin-bottom:12px;">Edit profile</div>
-      <div class="edit-field"><label>Full name</label><input id="ep-name" type="text" value="${name}" placeholder="Your name"></div>
+      <div class="edit-field"><label>Full name</label><input id="ep-name" type="text" value="${name}"></div>
       <div class="edit-field"><label>Username</label><input id="ep-username" type="text" value="${username}" placeholder="@yourname"></div>
       <div class="edit-field"><label>Home club</label><input id="ep-club" type="text" value="${club}" placeholder="e.g. Mercer Island CC"></div>
       <div class="edit-field"><label>USTA rating</label>
@@ -661,7 +713,8 @@ function openProfile() {
           <option value="private" ${vis==='private'?'selected':''}>Private</option>
         </select>
       </div>
-      <button class="save-btn" onclick="saveProfileEdits()">Save changes</button>
+      <div id="ep-err" style="color:#e74c3c;font-size:13px;margin-bottom:8px;display:none;"></div>
+      <button class="save-btn" id="ep-save" onclick="saveProfileEdits()">Save changes</button>
       <button class="signout-btn" onclick="signOut()">Sign out</button>
     </div>
   `;
@@ -674,7 +727,11 @@ function closeProfile() {
 
 async function saveProfileEdits() {
   const name = document.getElementById('ep-name').value.trim();
-  if (!name) { showToast('Name cannot be empty'); return; }
+  if (!name) {
+    const err = document.getElementById('ep-err');
+    err.textContent = 'Name cannot be empty.'; err.style.display = 'block';
+    return;
+  }
   const updates = {
     full_name: name,
     username: document.getElementById('ep-username').value.trim().replace('@', '') || null,
@@ -682,18 +739,18 @@ async function saveProfileEdits() {
     usta_rating: document.getElementById('ep-usta').value || null,
     profile_visibility: document.getElementById('ep-vis').value,
   };
-  const btn = document.querySelector('.save-btn');
+  const btn = document.getElementById('ep-save');
   btn.textContent = 'Saving…'; btn.disabled = true;
   try {
-    await sb(`/rest/v1/profiles?id=eq.${profile.id}`, 'PATCH', updates);
+    await sbFetch(`/rest/v1/profiles?id=eq.${profile.id}`, 'PATCH', updates);
     profile = { ...profile, ...updates };
     store('cs_profile', profile);
     closeProfile();
     updateHero();
     showToast('Profile updated ✓');
   } catch(err) {
-    showToast('Error: ' + err.message);
-  } finally {
+    const errEl = document.getElementById('ep-err');
+    errEl.textContent = 'Error: ' + err.message; errEl.style.display = 'block';
     btn.textContent = 'Save changes'; btn.disabled = false;
   }
 }
@@ -702,14 +759,13 @@ async function saveProfileEdits() {
 function setSeason() {
   const m = new Date().getMonth(), d = new Date().getDate();
   let name, flag, bg1, bg2;
-  if (m === 11 || m <= 1) { name='Australian Open'; flag='🇦🇺'; bg1='#004f9e'; bg2='#0073d4'; }
-  else if (m <= 4 || (m === 5 && d <= 15)) { name='Roland Garros'; flag='🇫🇷'; bg1='#b85010'; bg2='#d9621a'; }
-  else if ((m === 5 && d > 15) || m === 6 || (m === 7 && d <= 15)) { name='Wimbledon'; flag='🇬🇧'; bg1='#1f5c1f'; bg2='#2e7d2e'; }
-  else { name='US Open'; flag='🇺🇸'; bg1='#1a3870'; bg2='#1e4db0'; }
+  if (m === 11 || m <= 1)                          { name='Australian Open'; flag='🇦🇺'; bg1='#004f9e'; bg2='#0073d4'; }
+  else if (m <= 4 || (m === 5 && d <= 15))          { name='Roland Garros';  flag='🇫🇷'; bg1='#b85010'; bg2='#d9621a'; }
+  else if ((m===5&&d>15) || m===6 || (m===7&&d<=15)){ name='Wimbledon';      flag='🇬🇧'; bg1='#1f5c1f'; bg2='#2e7d2e'; }
+  else                                               { name='US Open';        flag='🇺🇸'; bg1='#1a3870'; bg2='#1e4db0'; }
   document.getElementById('season-badge').textContent = flag + ' ' + name;
   document.documentElement.style.setProperty('--season-bg1', bg1);
   document.documentElement.style.setProperty('--season-bg2', bg2);
-  document.documentElement.style.setProperty('--season-court', bg1 + '15');
 }
 
 // ── Toast ──────────────────────────────────────────────────────────────────────
@@ -723,45 +779,50 @@ function showToast(msg) {
 
 // ── Init ──────────────────────────────────────────────────────────────────────
 setSeason();
+showScreen('auth-screen'); // safe default — always start here visually
 
-// Self-healing: validate cached session before using it
 (async () => {
+  showLoading('Starting up…');
+  console.log('[Courtside] init start');
+
   const cachedSession = load('cs_session');
   const cachedProfile = load('cs_profile');
 
-  // If we have a cached profile with a name, show app immediately
-  if (cachedProfile && (cachedProfile.full_name || cachedProfile.name) && cachedProfile.id) {
+  // Fast path: valid cached profile with a name
+  if (cachedProfile?.full_name && cachedProfile?.id) {
+    console.log('[Courtside] found cached profile:', cachedProfile.full_name);
     profile = cachedProfile;
-    // Restore session if we have it
-    if (cachedSession?.access_token) {
-      session = cachedSession;
-    }
-    showApp();
-    // Then refresh profile from Supabase in background
+    session = cachedSession || null;
+    hideLoading();
+    showScreen('app-shell');
+    updateHero();
+    // Refresh from Supabase in background
     if (session?.access_token) {
       try {
-        const rows = await sb(`/rest/v1/profiles?id=eq.${profile.id}&select=*`);
-        if (rows && rows[0]) {
+        const rows = await sbFetch(`/rest/v1/profiles?id=eq.${profile.id}&select=*&limit=1`);
+        console.log('[Courtside] background refresh result:', rows);
+        if (rows?.[0]?.full_name) {
           profile = rows[0];
           store('cs_profile', profile);
           updateHero();
         }
-      } catch(e) {}
+      } catch(e) { console.warn('[Courtside] background refresh failed:', e.message); }
     }
     return;
   }
 
-  // If we have a session token, try to load profile
-  if (cachedSession?.access_token) {
-    session = cachedSession;
-    try {
-      await loadProfile();
-      return;
-    } catch(e) {}
+  // No cached profile — need a session to proceed
+  if (!cachedSession?.access_token) {
+    console.log('[Courtside] no session, showing auth');
+    hideLoading();
+    showScreen('auth-screen');
+    return;
   }
 
-  // No valid session — show auth
-  document.getElementById('auth-screen').classList.add('show');
+  session = cachedSession;
+  console.log('[Courtside] session found, user id:', session.user?.id);
+  hideLoading();
+  await fetchAndRouteProfile();
 })();
 </script>
 </body>
