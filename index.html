@@ -592,14 +592,15 @@ html,body{height:100%;font-family:var(--font);color:var(--ink);background:var(--
   </div>
   <div class="hero-body">
     <div>
-      <div class="hero-name" id="hero-name">—</div>
+      <div class="hero-name" id="hero-name" onclick="emergencyMenu()" style="cursor:pointer;">—</div>
     </div>
     <div style="cursor:pointer;" onclick="showProfile()" id="profile-av-wrap">
       <div id="profile-av" style="font-size:11px;font-weight:600;color:rgba(255,255,255,.7);background:rgba(255,255,255,.15);border:1px solid rgba(255,255,255,.25);border-radius:20px;padding:5px 12px;white-space:nowrap;">Profile ›</div>
     </div>
   </div>
-  <div style="padding:6px 0 14px;position:relative;z-index:1;">
+  <div style="display:flex;align-items:center;justify-content:space-between;padding:6px 0 14px;position:relative;z-index:1;">
     <div id="hero-club-sub" style="font-size:11px;color:rgba(255,255,255,.65);letter-spacing:.3px;"></div>
+    <button onclick="localStorage.clear();location.reload();" style="font-size:10px;color:rgba(255,255,255,.5);background:none;border:none;font-family:var(--font);cursor:pointer;padding:4px 0;">Sign out</button>
   </div>
 </div>
 
@@ -926,6 +927,22 @@ function applySeason(){
 }
 applySeason();
 
+// ── Self-healing session check ───────────────────────────────────────────────
+try {
+  // URL reset: ?reset=1 clears everything
+  if(location.search.includes('reset')) {
+    localStorage.clear();
+    location.href = location.pathname;
+  }
+  const _sp = localStorage.getItem('cs_profile');
+  if(_sp) {
+    const _p = JSON.parse(_sp);
+    if(!_p || !_p.name || !_p.id) {
+      localStorage.clear();
+    }
+  }
+} catch(e) { localStorage.clear(); }
+
 // ── Supabase REST API ────────────────────────────────────────────────────────
 const SUPA_URL = 'https://iresylsjokitxhzsumac.supabase.co';
 const SUPA_ANON = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImlyZXN5bHNqb2tpdHhoenN1bWFjIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Nzk4Mjk0ODAsImV4cCI6MjA5NTQwNTQ4MH0.xUGi-8v1lGQThlnmeJwfstEaGbMnVCF-md-e5ut3YZQ';
@@ -1234,6 +1251,13 @@ async function signUp(){
 }
 
 
+
+function emergencyMenu(){
+  if(profile&&profile.name){showProfile();return;}
+  if(confirm('Reset app and sign in again?')){
+    localStorage.clear();location.reload();
+  }
+}
 
 function assignColor(name){
   const colors=[
