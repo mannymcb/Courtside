@@ -738,6 +738,7 @@ async function fetchAndRouteProfile() {
       console.log('[Courtside] rendering: app-shell');
       showScreen('app-shell');
       updateHero();
+      await loadAppData();
     } else {
       // No profile or incomplete — show setup
       hideLoading();
@@ -819,6 +820,7 @@ async function saveSetup(uid) {
     console.log('[Courtside] profile saved, rendering: app-shell');
     showScreen('app-shell');
     updateHero();
+    await loadAppData();
     showToast('Welcome to Courtside! 🎾');
   } catch(err) {
     console.error('[Courtside] profile save error:', err.message);
@@ -1105,7 +1107,7 @@ async function saveMatch() {
     const saved = await sbFetch('/rest/v1/matches', 'POST', row);
     console.log('[Courtside] match saved:', saved);
     resetMatchForm();
-    await loadEntries();
+    await loadAppData();
     showToast('Match saved! 🎾');
     goPage('home', document.getElementById('nb-home'));
   } catch(err) {
@@ -1149,7 +1151,7 @@ async function savePractice() {
     const saved = await sbFetch('/rest/v1/practices', 'POST', row);
     console.log('[Courtside] practice saved:', saved);
     resetPracticeForm();
-    await loadEntries();
+    await loadAppData();
     showToast('Practice logged! 💪');
     goPage('home', document.getElementById('nb-home'));
   } catch(err) {
@@ -1167,6 +1169,20 @@ function resetPracticeForm() {
   document.getElementById('p-type').value = 'hitting';
   pFocusSelected = new Set();
   renderFocusChips('p-focus-chips', pFocusSelected);
+}
+
+// ── loadAppData — single function called after sign-in, profile save, and match/practice save
+async function loadAppData() {
+  console.log('[Courtside] loadAppData start');
+  const homeRecent = document.getElementById('home-recent');
+  if (homeRecent) homeRecent.innerHTML = '<div class="empty-state" style="padding:20px 0;">Loading…</div>';
+  try {
+    await loadEntries();
+    console.log('[Courtside] loadAppData complete');
+  } catch(err) {
+    console.error('[Courtside] loadAppData error:', err.message);
+    if (homeRecent) homeRecent.innerHTML = `<div class="empty-state" style="color:#e74c3c;">Could not load activity: ${err.message}</div>`;
+  }
 }
 
 // ── Load entries ───────────────────────────────────────────────────────────────
@@ -1304,8 +1320,8 @@ showScreen('auth-screen'); // safe default — always start here visually
           updateHero();
         }
       } catch(e) { console.warn('[Courtside] background refresh failed:', e.message); }
-      // Also load entries in background
-      loadEntries().catch(() => {});
+      // Also refresh app data in background
+      loadAppData().catch(() => {});
     }
     return;
   }
