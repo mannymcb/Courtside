@@ -225,6 +225,47 @@ html, body { height: 100%; font-family: var(--font); background: var(--page); co
 .cs-title { font-size: 15px; font-weight: 700; color: var(--ink); margin-bottom: 4px; }
 .cs-sub { font-size: 12px; color: var(--ink3); line-height: 1.5; }
 
+/* ── Week grid ── */
+.week-grid { display: flex; border: 1px solid var(--border); border-radius: var(--rsm); overflow: hidden; }
+.wstat { flex: 1; text-align: center; padding: 12px 4px; border-right: 1px solid var(--border); }
+.wstat:last-child { border-right: none; }
+.wstat-val { font-size: 20px; font-weight: 800; color: var(--ink); line-height: 1; }
+.wstat-lbl { font-size: 9px; font-weight: 700; text-transform: uppercase; letter-spacing: .5px; color: var(--ink3); margin-top: 3px; }
+.sl { font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: .6px; color: var(--ink3); margin: 14px 0 8px; }
+
+/* ── Entry cards ── */
+.entry-card { background: var(--surface); border-radius: var(--r); padding: 13px 15px; margin-bottom: 8px; display: flex; align-items: center; gap: 12px; box-shadow: var(--shadow); border: 1px solid var(--border); border-left: 3.5px solid var(--border); cursor: pointer; }
+.entry-card.win { border-left-color: #27ae60; }
+.entry-card.loss { border-left-color: #e74c3c; }
+.entry-card.practice { border-left-color: #3498db; }
+.entry-badge { width: 32px; height: 32px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 11px; font-weight: 800; flex-shrink: 0; }
+.entry-badge.win { background: #e8f8f0; color: #27ae60; }
+.entry-badge.loss { background: #fdecea; color: #e74c3c; }
+.entry-badge.practice { background: #ebf5fb; color: #3498db; }
+.entry-opp { font-size: 14px; font-weight: 700; color: var(--ink); }
+.entry-meta { font-size: 11px; color: var(--ink3); margin-top: 2px; }
+.entry-score { font-size: 12px; font-weight: 600; color: var(--ink2); margin-left: auto; flex-shrink: 0; }
+.empty-state { text-align: center; padding: 40px 20px; font-size: 13px; color: var(--ink3); line-height: 1.6; }
+
+/* ── Log page ── */
+.type-tabs { display: flex; background: var(--surface); border-radius: var(--r); padding: 3px; margin-bottom: 16px; box-shadow: var(--shadow); }
+.ttab { flex: 1; padding: 10px; border-radius: 11px; border: none; background: transparent; font-family: var(--font); font-size: 14px; font-weight: 600; cursor: pointer; color: var(--ink3); }
+.ttab.on { background: var(--page); color: var(--ink); box-shadow: var(--shadow); }
+.log-section { background: var(--surface); border-radius: var(--r); padding: 14px 16px; margin-bottom: 12px; box-shadow: var(--shadow); border: 1px solid var(--border); }
+.result-btns { display: flex; gap: 8px; }
+.rb { flex: 1; padding: 12px; border-radius: var(--rsm); border: 2px solid var(--border); background: var(--page); font-family: var(--font); font-size: 14px; font-weight: 700; cursor: pointer; color: var(--ink3); }
+.rb.win.on { background: #e8f8f0; border-color: #27ae60; color: #27ae60; }
+.rb.loss.on { background: #fdecea; border-color: #e74c3c; color: #e74c3c; }
+.lf { margin-bottom: 12px; }
+.lf label { font-size: 10px; font-weight: 700; letter-spacing: .6px; text-transform: uppercase; color: var(--ink3); display: block; margin-bottom: 5px; }
+.lf input, .lf select, .lf textarea { width: 100%; font-family: var(--font); font-size: 15px; color: var(--ink); background: var(--page); border: 1.5px solid var(--border); border-radius: var(--rsm); padding: 10px 12px; outline: none; -webkit-appearance: none; resize: vertical; }
+.lf input:focus, .lf select:focus, .lf textarea:focus { border-color: var(--season-bg1); background: var(--surface); }
+.toggle-btn { background: none; border: none; font-family: var(--font); font-size: 13px; font-weight: 600; color: var(--ink3); cursor: pointer; padding: 0; margin-bottom: 10px; }
+.save-log-btn { width: 100%; background: var(--season-bg1); color: #fff; border: none; border-radius: var(--r); padding: 15px; font-family: var(--font); font-size: 16px; font-weight: 700; cursor: pointer; margin-top: 4px; margin-bottom: 8px; }
+.chip-row { display: flex; gap: 6px; margin-bottom: 14px; overflow-x: auto; padding-bottom: 2px; }
+.chip { padding: 7px 14px; border-radius: 20px; border: 1.5px solid var(--border); background: var(--surface); font-family: var(--font); font-size: 12px; font-weight: 600; cursor: pointer; color: var(--ink3); white-space: nowrap; }
+.chip.on { background: var(--season-bg1); color: #fff; border-color: var(--season-bg1); }
+
 /* ── Toast ── */
 #toast { position: fixed; bottom: calc(env(safe-area-inset-bottom) + 80px); left: 50%; transform: translateX(-50%) translateY(10px); background: #1a1a1a; color: #fff; padding: 10px 20px; border-radius: 20px; font-size: 13px; font-weight: 600; opacity: 0; transition: all .25s; z-index: 999; white-space: nowrap; pointer-events: none; }
 #toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
@@ -324,7 +365,7 @@ html, body { height: 100%; font-family: var(--font); background: var(--page); co
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>
       Activity
     </button>
-    <button class="nb-plus" onclick="showToast('Match logging coming in v0.3')">
+    <button class="nb-plus" id="nb-log" onclick="goLog()">
       <div class="nb-plus-circle">＋</div>
       <div class="nb-plus-label">LOG</div>
     </button>
@@ -340,23 +381,28 @@ html, body { height: 100%; font-family: var(--font); background: var(--page); co
 
   <!-- PAGES -->
   <div class="page on" id="page-home">
-    <div class="card">
+    <div class="card" id="home-stats-card">
       <div class="card-title">This week</div>
-      <div style="text-align:center;padding:8px 0;font-size:13px;color:var(--ink3);">Log your first match to see stats here.</div>
+      <div class="week-grid" id="week-grid">
+        <div class="wstat"><div class="wstat-val" id="ws-matches">—</div><div class="wstat-lbl">Matches</div></div>
+        <div class="wstat"><div class="wstat-val" id="ws-wins">—</div><div class="wstat-lbl">Wins</div></div>
+        <div class="wstat"><div class="wstat-val" id="ws-practice">—</div><div class="wstat-lbl">Practice</div></div>
+        <div class="wstat"><div class="wstat-val" id="ws-streak">—</div><div class="wstat-lbl">Streak</div></div>
+      </div>
     </div>
-    <div class="coming-soon">
-      <div class="cs-icon">🎾</div>
-      <div class="cs-title">Match logging coming in v0.3</div>
-      <div class="cs-sub">Track every match, see your stats, earn badges, and build your streak.</div>
-    </div>
+    <div class="sl">Recent</div>
+    <div id="home-recent"></div>
   </div>
 
   <div class="page" id="page-activity">
-    <div class="coming-soon">
-      <div class="cs-icon">📊</div>
-      <div class="cs-title">Activity coming in v0.3</div>
-      <div class="cs-sub">Win rates, sets won, practice sessions, and your full match history.</div>
+    <div class="chip-row">
+      <button class="chip on" onclick="setFilter('all',this)">All</button>
+      <button class="chip" onclick="setFilter('match',this)">Matches</button>
+      <button class="chip" onclick="setFilter('practice',this)">Practice</button>
+      <button class="chip" onclick="setFilter('win',this)">Wins</button>
+      <button class="chip" onclick="setFilter('loss',this)">Losses</button>
     </div>
+    <div id="activity-list"><div class="empty-state">No entries yet — tap Log to record your first match.</div></div>
   </div>
 
   <div class="page" id="page-club">
@@ -372,6 +418,96 @@ html, body { height: 100%; font-family: var(--font); background: var(--page); co
       <div class="cs-icon">📚</div>
       <div class="cs-title">Improve coming in v0.4</div>
       <div class="cs-sub">Curated videos, drills, and reading based on your game.</div>
+    </div>
+  </div>
+
+
+  <!-- LOG PAGE -->
+  <div class="page" id="page-log">
+    <div class="type-tabs">
+      <button class="ttab on" id="tt-match" onclick="setLogType('match')">🎾 Match</button>
+      <button class="ttab" id="tt-practice" onclick="setLogType('practice')">🏃 Practice</button>
+    </div>
+
+    <!-- MATCH FORM -->
+    <div id="log-match">
+      <div class="log-section">
+        <div class="sl">Result</div>
+        <div class="result-btns">
+          <button class="rb win on" id="rb-win" onclick="setResult('win')">🏆 Win</button>
+          <button class="rb loss" id="rb-loss" onclick="setResult('loss')">Loss</button>
+        </div>
+      </div>
+      <div class="log-section">
+        <div class="sl">Match details</div>
+        <div class="lf"><label>Opponent</label><input id="m-opp" type="text" placeholder="Name" autocomplete="off"></div>
+        <div class="lf"><label>Score</label><input id="m-score" type="text" placeholder="e.g. 6–4, 3–6, 10–7"></div>
+        <div class="lf"><label>Date</label><input id="m-date" type="date"></div>
+        <div class="lf"><label>Match type</label>
+          <select id="m-type">
+            <option value="singles">Singles</option>
+            <option value="doubles">Doubles</option>
+            <option value="mixed">Mixed doubles</option>
+          </select>
+        </div>
+        <div class="lf" id="m-partner-row" style="display:none;"><label>Partner</label><input id="m-partner" type="text" placeholder="Partner name"></div>
+        <div class="lf"><label>Location</label><input id="m-location" type="text" placeholder="Club or court name"></div>
+      </div>
+      <div class="log-section">
+        <button class="toggle-btn" onclick="toggleOptional('m-optional','m-arr')">
+          Feedback & notes <span id="m-arr">▸</span>
+        </button>
+        <div id="m-optional" style="display:none;">
+          <div class="lf"><label>What worked well</label><textarea id="m-worked" rows="2" placeholder="e.g. First serve, net play…"></textarea></div>
+          <div class="lf"><label>What to work on</label><textarea id="m-needs" rows="2" placeholder="e.g. Backhand consistency…"></textarea></div>
+          <div class="lf"><label>Notes</label><textarea id="m-notes" rows="2" placeholder="Any other thoughts…"></textarea></div>
+        </div>
+      </div>
+      <button class="save-log-btn" onclick="saveMatch()">Save match</button>
+    </div>
+
+    <!-- PRACTICE FORM -->
+    <div id="log-practice" style="display:none;">
+      <div class="log-section">
+        <div class="sl">Session details</div>
+        <div class="lf"><label>Date</label><input id="p-date" type="date"></div>
+        <div class="lf"><label>Duration</label>
+          <select id="p-duration">
+            <option value="30">30 minutes</option>
+            <option value="45">45 minutes</option>
+            <option value="60" selected>1 hour</option>
+            <option value="90">90 minutes</option>
+            <option value="120">2 hours</option>
+          </select>
+        </div>
+        <div class="lf"><label>Session type</label>
+          <select id="p-type">
+            <option value="hitting">Hitting session</option>
+            <option value="drilling">Drilling</option>
+            <option value="match-play">Match play</option>
+            <option value="lesson">Lesson</option>
+            <option value="fitness">Fitness / conditioning</option>
+            <option value="serving">Serving practice</option>
+            <option value="other">Other</option>
+          </select>
+        </div>
+        <div class="lf"><label>Focus area</label>
+          <select id="p-focus">
+            <option value="">General practice</option>
+            <option value="serve">Serve</option>
+            <option value="forehand">Forehand</option>
+            <option value="backhand">Backhand</option>
+            <option value="volley">Volley / net play</option>
+            <option value="return">Return of serve</option>
+            <option value="movement">Movement / footwork</option>
+            <option value="mental">Mental game</option>
+            <option value="tactics">Tactics</option>
+          </select>
+        </div>
+        <div class="lf"><label>Notes</label><textarea id="p-notes" rows="2" placeholder="What did you work on?"></textarea></div>
+        <div class="lf"><label>Next goal</label><textarea id="p-goal" rows="2" placeholder="What do you want to improve next?"></textarea></div>
+      </div>
+      <button class="save-log-btn" onclick="savePractice()">Save practice</button>
     </div>
   </div>
 
@@ -768,6 +904,218 @@ function setSeason() {
   document.documentElement.style.setProperty('--season-bg2', bg2);
 }
 
+// ── Log ───────────────────────────────────────────────────────────────────────
+let matchResult = 'win';
+let activityFilter = 'all';
+let allEntries = []; // combined matches + practices sorted by date
+
+function goLog() {
+  if (!session?.access_token) { showToast('Please sign in first'); return; }
+  goPage('log', document.getElementById('nb-log'));
+  document.getElementById('m-date').value = today();
+  document.getElementById('p-date').value = today();
+}
+
+function today() { return new Date().toISOString().slice(0, 10); }
+
+function setLogType(t) {
+  document.getElementById('tt-match').classList.toggle('on', t === 'match');
+  document.getElementById('tt-practice').classList.toggle('on', t === 'practice');
+  document.getElementById('log-match').style.display = t === 'match' ? 'block' : 'none';
+  document.getElementById('log-practice').style.display = t === 'practice' ? 'block' : 'none';
+}
+
+function setResult(r) {
+  matchResult = r;
+  document.getElementById('rb-win').classList.toggle('on', r === 'win');
+  document.getElementById('rb-loss').classList.toggle('on', r === 'loss');
+}
+
+function toggleOptional(id, arrId) {
+  const el = document.getElementById(id);
+  const open = el.style.display !== 'none';
+  el.style.display = open ? 'none' : 'block';
+  document.getElementById(arrId).textContent = open ? '▸' : '▾';
+}
+
+// Watch match type to show/hide partner field
+document.addEventListener('change', function(e) {
+  if (e.target.id === 'm-type') {
+    const isDoubles = ['doubles','mixed'].includes(e.target.value);
+    document.getElementById('m-partner-row').style.display = isDoubles ? 'block' : 'none';
+  }
+});
+
+async function saveMatch() {
+  const opp = document.getElementById('m-opp').value.trim();
+  if (!opp) { showToast('Please enter opponent name'); return; }
+  const btn = document.querySelector('#log-match .save-log-btn');
+  btn.textContent = 'Saving…'; btn.disabled = true;
+  const row = {
+    user_id: session.user.id,
+    played_at: document.getElementById('m-date').value || today(),
+    match_type: document.getElementById('m-type').value,
+    opponent: opp,
+    partner: document.getElementById('m-partner').value.trim() || null,
+    result: matchResult,
+    score: document.getElementById('m-score').value.trim() || null,
+    location: document.getElementById('m-location').value.trim() || null,
+    worked_well: document.getElementById('m-worked').value.trim() || null,
+    needs_work: document.getElementById('m-needs').value.trim() || null,
+    notes: document.getElementById('m-notes').value.trim() || null,
+  };
+  try {
+    const saved = await sbFetch('/rest/v1/matches', 'POST', row);
+    console.log('[Courtside] match saved:', saved);
+    resetMatchForm();
+    await loadEntries();
+    showToast('Match saved! 🎾');
+    goPage('home', document.getElementById('nb-home'));
+  } catch(err) {
+    console.error('[Courtside] match save error:', err.message);
+    showToast('Error: ' + err.message);
+  } finally {
+    btn.textContent = 'Save match'; btn.disabled = false;
+  }
+}
+
+function resetMatchForm() {
+  ['m-opp','m-score','m-location','m-partner'].forEach(id => { const el = document.getElementById(id); if(el) el.value = ''; });
+  ['m-worked','m-needs','m-notes'].forEach(id => { const el = document.getElementById(id); if(el) el.value = ''; });
+  document.getElementById('m-date').value = today();
+  document.getElementById('m-type').value = 'singles';
+  document.getElementById('m-partner-row').style.display = 'none';
+  document.getElementById('m-optional').style.display = 'none';
+  document.getElementById('m-arr').textContent = '▸';
+  setResult('win');
+}
+
+async function savePractice() {
+  const btn = document.querySelector('#log-practice .save-log-btn');
+  btn.textContent = 'Saving…'; btn.disabled = true;
+  const row = {
+    user_id: session.user.id,
+    practiced_at: document.getElementById('p-date').value || today(),
+    duration_minutes: parseInt(document.getElementById('p-duration').value) || 60,
+    practice_type: document.getElementById('p-type').value,
+    focus_area: document.getElementById('p-focus').value || null,
+    notes: document.getElementById('p-notes').value.trim() || null,
+    next_goal: document.getElementById('p-goal').value.trim() || null,
+  };
+  try {
+    const saved = await sbFetch('/rest/v1/practices', 'POST', row);
+    console.log('[Courtside] practice saved:', saved);
+    resetPracticeForm();
+    await loadEntries();
+    showToast('Practice logged! 💪');
+    goPage('home', document.getElementById('nb-home'));
+  } catch(err) {
+    console.error('[Courtside] practice save error:', err.message);
+    showToast('Error: ' + err.message);
+  } finally {
+    btn.textContent = 'Save practice'; btn.disabled = false;
+  }
+}
+
+function resetPracticeForm() {
+  ['p-notes','p-goal'].forEach(id => { const el = document.getElementById(id); if(el) el.value = ''; });
+  document.getElementById('p-date').value = today();
+  document.getElementById('p-duration').value = '60';
+  document.getElementById('p-type').value = 'hitting';
+  document.getElementById('p-focus').value = '';
+}
+
+// ── Load entries ───────────────────────────────────────────────────────────────
+async function loadEntries() {
+  if (!session?.user?.id) return;
+  const uid = session.user.id;
+  console.log('[Courtside] loading entries for user:', uid);
+  try {
+    const [matches, practices] = await Promise.all([
+      sbFetch(`/rest/v1/matches?user_id=eq.${uid}&order=played_at.desc&limit=50`),
+      sbFetch(`/rest/v1/practices?user_id=eq.${uid}&order=practiced_at.desc&limit=50`),
+    ]);
+    const m = (Array.isArray(matches) ? matches : []).map(r => ({ ...r, _kind: 'match', _date: r.played_at }));
+    const p = (Array.isArray(practices) ? practices : []).map(r => ({ ...r, _kind: 'practice', _date: r.practiced_at }));
+    allEntries = [...m, ...p].sort((a, b) => b._date.localeCompare(a._date));
+    console.log('[Courtside] entries loaded — matches:', m.length, 'practices:', p.length);
+    renderHome();
+    renderActivity();
+  } catch(err) {
+    console.error('[Courtside] load entries error:', err.message);
+  }
+}
+
+// ── Render home ────────────────────────────────────────────────────────────────
+function renderHome() {
+  // This week stats
+  const weekStart = new Date();
+  weekStart.setDate(weekStart.getDate() - weekStart.getDay());
+  const weekStr = weekStart.toISOString().slice(0, 10);
+  const weekEntries = allEntries.filter(e => e._date >= weekStr);
+  const weekMatches = weekEntries.filter(e => e._kind === 'match');
+  const weekWins = weekMatches.filter(e => e.result === 'win').length;
+  const weekPractice = weekEntries.filter(e => e._kind === 'practice').length;
+  // Streak
+  let streak = 0;
+  for (const e of allEntries.filter(e => e._kind === 'match')) {
+    if (e.result === 'win') streak++; else break;
+  }
+  document.getElementById('ws-matches').textContent = weekMatches.length || '—';
+  document.getElementById('ws-wins').textContent = weekWins || '—';
+  document.getElementById('ws-practice').textContent = weekPractice || '—';
+  document.getElementById('ws-streak').textContent = streak ? streak + '🔥' : '—';
+  // Recent
+  const recent = allEntries.slice(0, 5);
+  document.getElementById('home-recent').innerHTML = recent.length
+    ? recent.map(entryCard).join('')
+    : '<div class="empty-state">Nothing logged yet.<br>Tap <strong>＋ LOG</strong> to record your first match.</div>';
+}
+
+function entryCard(e) {
+  const isMatch = e._kind === 'match';
+  const cls = isMatch ? (e.result === 'win' ? 'win' : 'loss') : 'practice';
+  const badge = isMatch ? (e.result === 'win' ? 'W' : 'L') : 'P';
+  const title = isMatch ? `vs ${e.opponent}` : (e.practice_type || 'Practice');
+  const meta = isMatch
+    ? `${formatDate(e._date)}${e.location ? ' · ' + e.location : ''}`
+    : `${formatDate(e._date)} · ${e.duration_minutes ? e.duration_minutes + ' min' : ''}`;
+  const score = isMatch && e.score ? `<div class="entry-score">${e.score}</div>` : '';
+  return `<div class="entry-card ${cls}">
+    <div class="entry-badge ${cls}">${badge}</div>
+    <div style="flex:1;min-width:0;">
+      <div class="entry-opp">${title}</div>
+      <div class="entry-meta">${meta}</div>
+    </div>
+    ${score}
+  </div>`;
+}
+
+function formatDate(d) {
+  if (!d) return '';
+  const [y, m, day] = d.split('-').map(Number);
+  return new Date(y, m-1, day).toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' });
+}
+
+// ── Render activity ────────────────────────────────────────────────────────────
+function setFilter(f, btn) {
+  activityFilter = f;
+  document.querySelectorAll('.chip').forEach(c => c.classList.remove('on'));
+  btn.classList.add('on');
+  renderActivity();
+}
+
+function renderActivity() {
+  let filtered = allEntries;
+  if (activityFilter === 'match') filtered = allEntries.filter(e => e._kind === 'match');
+  else if (activityFilter === 'practice') filtered = allEntries.filter(e => e._kind === 'practice');
+  else if (activityFilter === 'win') filtered = allEntries.filter(e => e._kind === 'match' && e.result === 'win');
+  else if (activityFilter === 'loss') filtered = allEntries.filter(e => e._kind === 'match' && e.result === 'loss');
+  document.getElementById('activity-list').innerHTML = filtered.length
+    ? filtered.map(entryCard).join('')
+    : '<div class="empty-state">No entries match this filter.</div>';
+}
+
 // ── Toast ──────────────────────────────────────────────────────────────────────
 let toastTimer;
 function showToast(msg) {
@@ -807,6 +1155,8 @@ showScreen('auth-screen'); // safe default — always start here visually
           updateHero();
         }
       } catch(e) { console.warn('[Courtside] background refresh failed:', e.message); }
+      // Also load entries in background
+      loadEntries().catch(() => {});
     }
     return;
   }
