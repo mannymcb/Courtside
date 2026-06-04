@@ -1245,8 +1245,11 @@ function assignColor(name){
 }
 
 function signOut(){
+  const uid = sbUser?.id;
   sbUser=null;profile=null;entries=[];posts=[];friends=[];teams=[];
-  ['cs_token','cs_refresh','cs_profile','cs_entries','cs_posts','cs_friends','cs_teams'].forEach(k=>localStorage.removeItem(k));
+  const keysToRemove = ['cs_token','cs_refresh','cs_profile','cs_posts'];
+  if(uid) keysToRemove.push('cs_entries_'+uid,'cs_friends_'+uid,'cs_teams_'+uid);
+  keysToRemove.forEach(k=>localStorage.removeItem(k));
   document.getElementById('prof-overlay').classList.remove('on');
   document.getElementById('auth-screen').classList.add('show');
 }
@@ -1308,7 +1311,8 @@ function showProfileConfirmation(){
 
 function updateHeroProfile(){
   if(!profile) return;
-  document.getElementById('hero-name').textContent=profile.name;
+  const name = profile.name||profile.email||'Player';
+  document.getElementById('hero-name').textContent=name;
   if(profile.club) document.getElementById('club-header-name').textContent=profile.club;
   const sub=document.getElementById('hero-club-sub');
   if(sub){
@@ -1320,7 +1324,7 @@ function updateHeroProfile(){
 }
 
 function showProfile(){
-  if(!profile) return;
+  if(!profile){showToast('Please sign in');return;}
   const m=entries.filter(e=>e.kind==='match');
   const w=m.filter(e=>e.res==='win').length;
   document.getElementById('prof-body').innerHTML=`
@@ -2261,45 +2265,7 @@ renderLearn();
     return;
   }
 
-  // Always try local profile first — never lock user out
-  if(savedProfile){
-    try {
-      profile = JSON.parse(savedProfile);
-      sbUser = {id: profile.id};
-      entries = JSON.parse(csGet('cs_entries')||'[]');
-      posts = JSON.parse(csGet('cs_posts')||'[]');
-      friends = JSON.parse(csGet('cs_friends')||'[]');
-      teams = JSON.parse(csGet('cs_teams')||'[]');
-      document.getElementById('auth-screen').classList.remove('show');
-      document.getElementById('profile-setup').classList.remove('show');
-      updateHeroProfile();
-      renderHome();
-    } catch(e){}
-  }
 
-  // Then try to refresh session in background
-  if(token){
-    try {
-      await loadUserData();
-    } catch(err){
-      if(refresh){
-        try {
-          const r = await api('refresh',{refresh_token:refresh});
-          csSet('cs_token', r.token);
-          csSet('cs_refresh', r.refresh_token);
-          sbUser = {id: profile?.id};
-          await loadUserData();
-        } catch(e){
-          // Keep local profile — don't show auth screen if we have data
-          if(!savedProfile) document.getElementById('auth-screen').classList.add('show');
-        }
-      } else if(!savedProfile){
-        document.getElementById('auth-screen').classList.add('show');
-      }
-    }
-  } else if(!savedProfile){
-    document.getElementById('auth-screen').classList.add('show');
-  }
 })();
 
 setTimeout(()=>{const sp=document.getElementById('splash');if(sp){sp.style.opacity='0';sp.style.pointerEvents='none';setTimeout(()=>sp.remove(),600);}},1200);
