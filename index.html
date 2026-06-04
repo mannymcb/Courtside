@@ -266,6 +266,28 @@ html, body { height: 100%; font-family: var(--font); background: var(--page); co
 .chip { padding: 7px 14px; border-radius: 20px; border: 1.5px solid var(--border); background: var(--surface); font-family: var(--font); font-size: 12px; font-weight: 600; cursor: pointer; color: var(--ink3); white-space: nowrap; }
 .chip.on { background: var(--season-bg1); color: #fff; border-color: var(--season-bg1); }
 
+/* ── Score inputs ── */
+.score-sets { display: flex; flex-direction: column; gap: 8px; }
+.score-set-row { display: flex; align-items: center; gap: 8px; background: var(--page); border-radius: var(--rsm); padding: 10px 12px; }
+.score-set-label { font-size: 11px; font-weight: 700; color: var(--ink3); width: 40px; flex-shrink: 0; }
+.score-set-inputs { display: flex; align-items: center; gap: 6px; flex: 1; }
+.score-num { width: 52px; text-align: center; font-size: 20px; font-weight: 800; color: var(--ink); background: var(--surface); border: 1.5px solid var(--border); border-radius: var(--rsm); padding: 8px 4px; outline: none; font-family: var(--font); -webkit-appearance: none; }
+.score-num:focus { border-color: var(--season-bg1); }
+.score-sep { font-size: 18px; font-weight: 300; color: var(--ink3); }
+.score-set-remove { background: none; border: none; font-size: 18px; color: var(--ink4); cursor: pointer; padding: 0 4px; line-height: 1; }
+.score-set-remove:active { color: #e74c3c; }
+.add-set-btn { display: flex; align-items: center; gap: 6px; background: none; border: 1.5px dashed var(--border); border-radius: var(--rsm); padding: 9px 14px; font-family: var(--font); font-size: 13px; font-weight: 600; color: var(--ink3); cursor: pointer; width: 100%; justify-content: center; margin-top: 4px; }
+.add-set-btn:active { background: var(--page); }
+
+/* ── Focus chips ── */
+.focus-chips { display: flex; flex-wrap: wrap; gap: 7px; }
+.focus-chip { padding: 7px 13px; border-radius: 20px; border: 1.5px solid var(--border); background: var(--surface); font-family: var(--font); font-size: 12px; font-weight: 600; cursor: pointer; color: var(--ink3); transition: all .12s; white-space: nowrap; }
+.focus-chip.on { background: var(--season-bg1); color: #fff; border-color: var(--season-bg1); }
+
+/* ── Entry chip tags ── */
+.entry-chips { display: flex; flex-wrap: wrap; gap: 4px; margin-top: 5px; }
+.entry-chip { font-size: 10px; font-weight: 600; background: var(--page); color: var(--ink3); border-radius: 10px; padding: 2px 8px; border: 1px solid var(--border); }
+
 /* ── Toast ── */
 #toast { position: fixed; bottom: calc(env(safe-area-inset-bottom) + 80px); left: 50%; transform: translateX(-50%) translateY(10px); background: #1a1a1a; color: #fff; padding: 10px 20px; border-radius: 20px; font-size: 13px; font-weight: 600; opacity: 0; transition: all .25s; z-index: 999; white-space: nowrap; pointer-events: none; }
 #toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
@@ -431,6 +453,7 @@ html, body { height: 100%; font-family: var(--font); background: var(--page); co
 
     <!-- MATCH FORM -->
     <div id="log-match">
+      <!-- Result -->
       <div class="log-section">
         <div class="sl">Result</div>
         <div class="result-btns">
@@ -438,13 +461,14 @@ html, body { height: 100%; font-family: var(--font); background: var(--page); co
           <button class="rb loss" id="rb-loss" onclick="setResult('loss')">Loss</button>
         </div>
       </div>
+
+      <!-- Match details -->
       <div class="log-section">
         <div class="sl">Match details</div>
         <div class="lf"><label>Opponent</label><input id="m-opp" type="text" placeholder="Name" autocomplete="off"></div>
-        <div class="lf"><label>Score</label><input id="m-score" type="text" placeholder="e.g. 6–4, 3–6, 10–7"></div>
         <div class="lf"><label>Date</label><input id="m-date" type="date"></div>
         <div class="lf"><label>Match type</label>
-          <select id="m-type">
+          <select id="m-type" onchange="onTypeChange()">
             <option value="singles">Singles</option>
             <option value="doubles">Doubles</option>
             <option value="mixed">Mixed doubles</option>
@@ -453,9 +477,41 @@ html, body { height: 100%; font-family: var(--font); background: var(--page); co
         <div class="lf" id="m-partner-row" style="display:none;"><label>Partner</label><input id="m-partner" type="text" placeholder="Partner name"></div>
         <div class="lf"><label>Location</label><input id="m-location" type="text" placeholder="Club or court name"></div>
       </div>
+
+      <!-- Score -->
+      <div class="log-section">
+        <div class="sl">Score</div>
+        <div class="score-sets" id="score-sets">
+          <div class="score-set-row" id="set-row-0">
+            <div class="score-set-label">Set 1</div>
+            <div class="score-set-inputs">
+              <input class="score-num" id="s0-me" type="number" min="0" max="99" placeholder="0" inputmode="numeric">
+              <span class="score-sep">–</span>
+              <input class="score-num" id="s0-opp" type="number" min="0" max="99" placeholder="0" inputmode="numeric">
+            </div>
+          </div>
+          <div class="score-set-row" id="set-row-1">
+            <div class="score-set-label">Set 2</div>
+            <div class="score-set-inputs">
+              <input class="score-num" id="s1-me" type="number" min="0" max="99" placeholder="0" inputmode="numeric">
+              <span class="score-sep">–</span>
+              <input class="score-num" id="s1-opp" type="number" min="0" max="99" placeholder="0" inputmode="numeric">
+            </div>
+          </div>
+        </div>
+        <button class="add-set-btn" id="add-set-btn" onclick="addSet()">+ Add set / tiebreak</button>
+      </div>
+
+      <!-- Focus areas -->
+      <div class="log-section">
+        <div class="sl">Focus areas <span style="font-weight:400;text-transform:none;letter-spacing:0;font-size:11px;color:var(--ink4);">Select all that apply</span></div>
+        <div class="focus-chips" id="m-focus-chips"></div>
+      </div>
+
+      <!-- Optional notes -->
       <div class="log-section">
         <button class="toggle-btn" onclick="toggleOptional('m-optional','m-arr')">
-          Feedback & notes <span id="m-arr">▸</span>
+          Notes <span id="m-arr">▸</span>
         </button>
         <div id="m-optional" style="display:none;">
           <div class="lf"><label>What worked well</label><textarea id="m-worked" rows="2" placeholder="e.g. First serve, net play…"></textarea></div>
@@ -491,19 +547,16 @@ html, body { height: 100%; font-family: var(--font); background: var(--page); co
             <option value="other">Other</option>
           </select>
         </div>
-        <div class="lf"><label>Focus area</label>
-          <select id="p-focus">
-            <option value="">General practice</option>
-            <option value="serve">Serve</option>
-            <option value="forehand">Forehand</option>
-            <option value="backhand">Backhand</option>
-            <option value="volley">Volley / net play</option>
-            <option value="return">Return of serve</option>
-            <option value="movement">Movement / footwork</option>
-            <option value="mental">Mental game</option>
-            <option value="tactics">Tactics</option>
-          </select>
-        </div>
+      </div>
+
+      <!-- Focus areas -->
+      <div class="log-section">
+        <div class="sl">Focus areas <span style="font-weight:400;text-transform:none;letter-spacing:0;font-size:11px;color:var(--ink4);">Select all that apply</span></div>
+        <div class="focus-chips" id="p-focus-chips"></div>
+      </div>
+
+      <!-- Notes -->
+      <div class="log-section">
         <div class="lf"><label>Notes</label><textarea id="p-notes" rows="2" placeholder="What did you work on?"></textarea></div>
         <div class="lf"><label>Next goal</label><textarea id="p-goal" rows="2" placeholder="What do you want to improve next?"></textarea></div>
       </div>
@@ -907,16 +960,43 @@ function setSeason() {
 // ── Log ───────────────────────────────────────────────────────────────────────
 let matchResult = 'win';
 let activityFilter = 'all';
-let allEntries = []; // combined matches + practices sorted by date
+let allEntries = [];
+let mFocusSelected = new Set();
+let pFocusSelected = new Set();
+let extraSets = 0;
+
+const FOCUS_AREAS = [
+  'First serve','Second serve','Return','Forehand','Backhand',
+  'Volleys','Overheads','Court movement','Footwork','Net play',
+  'Transition game','Shot selection','Consistency','Depth','Spin',
+  'Mental focus','Doubles positioning','Communication','Fitness'
+];
+
+function today() { return new Date().toISOString().slice(0, 10); }
 
 function goLog() {
   if (!session?.access_token) { showToast('Please sign in first'); return; }
   goPage('log', document.getElementById('nb-log'));
   document.getElementById('m-date').value = today();
   document.getElementById('p-date').value = today();
+  renderFocusChips('m-focus-chips', mFocusSelected);
+  renderFocusChips('p-focus-chips', pFocusSelected);
 }
 
-function today() { return new Date().toISOString().slice(0, 10); }
+function renderFocusChips(containerId, selected) {
+  const el = document.getElementById(containerId);
+  if (!el) return;
+  const prefix = containerId.startsWith('m-') ? 'm' : 'p';
+  el.innerHTML = FOCUS_AREAS.map(f =>
+    `<button class="focus-chip${selected.has(f)?' on':''}" onclick="toggleFocus('${prefix}','${f.replace(/'/g,'\'\'')}',this)">${f}</button>`
+  ).join('');
+}
+
+function toggleFocus(prefix, area, btn) {
+  const set = prefix === 'm' ? mFocusSelected : pFocusSelected;
+  if (set.has(area)) { set.delete(area); btn.classList.remove('on'); }
+  else { set.add(area); btn.classList.add('on'); }
+}
 
 function setLogType(t) {
   document.getElementById('tt-match').classList.toggle('on', t === 'match');
@@ -931,6 +1011,11 @@ function setResult(r) {
   document.getElementById('rb-loss').classList.toggle('on', r === 'loss');
 }
 
+function onTypeChange() {
+  const isDoubles = ['doubles','mixed'].includes(document.getElementById('m-type').value);
+  document.getElementById('m-partner-row').style.display = isDoubles ? 'block' : 'none';
+}
+
 function toggleOptional(id, arrId) {
   const el = document.getElementById(id);
   const open = el.style.display !== 'none';
@@ -938,32 +1023,84 @@ function toggleOptional(id, arrId) {
   document.getElementById(arrId).textContent = open ? '▸' : '▾';
 }
 
-// Watch match type to show/hide partner field
-document.addEventListener('change', function(e) {
-  if (e.target.id === 'm-type') {
-    const isDoubles = ['doubles','mixed'].includes(e.target.value);
-    document.getElementById('m-partner-row').style.display = isDoubles ? 'block' : 'none';
-  }
-});
+// ── Score sets ────────────────────────────────────────────────────────────────
+function addSet() {
+  if (extraSets >= 1) return; // max 3 sets
+  extraSets++;
+  const idx = 2;
+  const container = document.getElementById('score-sets');
+  const row = document.createElement('div');
+  row.className = 'score-set-row';
+  row.id = `set-row-${idx}`;
+  row.innerHTML = `
+    <div class="score-set-label">Set 3</div>
+    <div class="score-set-inputs">
+      <input class="score-num" id="s${idx}-me" type="number" min="0" max="99" placeholder="0" inputmode="numeric">
+      <span class="score-sep">–</span>
+      <input class="score-num" id="s${idx}-opp" type="number" min="0" max="99" placeholder="0" inputmode="numeric">
+    </div>
+    <button class="score-set-remove" onclick="removeSet(${idx})" title="Remove set">×</button>
+  `;
+  container.appendChild(row);
+  document.getElementById('add-set-btn').style.display = 'none';
+}
 
+function removeSet(idx) {
+  const row = document.getElementById(`set-row-${idx}`);
+  if (row) row.remove();
+  extraSets--;
+  document.getElementById('add-set-btn').style.display = 'flex';
+}
+
+function buildScore() {
+  const sets = [];
+  const setCount = 2 + extraSets;
+  for (let i = 0; i < setCount; i++) {
+    const me = document.getElementById(`s${i}-me`);
+    const opp = document.getElementById(`s${i}-opp`);
+    if (!me || !opp) continue;
+    const mv = me.value.trim(), ov = opp.value.trim();
+    if (mv !== '' || ov !== '') {
+      sets.push({ my_games: parseInt(mv) || 0, opponent_games: parseInt(ov) || 0 });
+    }
+  }
+  const scoreStr = sets.map(s => `${s.my_games}-${s.opponent_games}`).join(', ');
+  return { score: scoreStr || null, score_sets: sets.length ? sets : null };
+}
+
+function resetScoreInputs() {
+  ['s0-me','s0-opp','s1-me','s1-opp'].forEach(id => {
+    const el = document.getElementById(id); if(el) el.value = '';
+  });
+  const extra = document.getElementById('set-row-2');
+  if (extra) extra.remove();
+  extraSets = 0;
+  document.getElementById('add-set-btn').style.display = 'flex';
+}
+
+// ── Save match ────────────────────────────────────────────────────────────────
 async function saveMatch() {
   const opp = document.getElementById('m-opp').value.trim();
   if (!opp) { showToast('Please enter opponent name'); return; }
   const btn = document.querySelector('#log-match .save-log-btn');
   btn.textContent = 'Saving…'; btn.disabled = true;
+  const { score, score_sets } = buildScore();
   const row = {
     user_id: session.user.id,
     played_at: document.getElementById('m-date').value || today(),
     match_type: document.getElementById('m-type').value,
     opponent: opp,
-    partner: document.getElementById('m-partner').value.trim() || null,
+    partner: document.getElementById('m-partner')?.value.trim() || null,
     result: matchResult,
-    score: document.getElementById('m-score').value.trim() || null,
+    score,
+    score_sets,
+    focus_areas: mFocusSelected.size > 0 ? Array.from(mFocusSelected) : null,
     location: document.getElementById('m-location').value.trim() || null,
-    worked_well: document.getElementById('m-worked').value.trim() || null,
-    needs_work: document.getElementById('m-needs').value.trim() || null,
-    notes: document.getElementById('m-notes').value.trim() || null,
+    worked_well: document.getElementById('m-worked')?.value.trim() || null,
+    needs_work: document.getElementById('m-needs')?.value.trim() || null,
+    notes: document.getElementById('m-notes')?.value.trim() || null,
   };
+  console.log('[Courtside] saving match:', row);
   try {
     const saved = await sbFetch('/rest/v1/matches', 'POST', row);
     console.log('[Courtside] match saved:', saved);
@@ -980,7 +1117,7 @@ async function saveMatch() {
 }
 
 function resetMatchForm() {
-  ['m-opp','m-score','m-location','m-partner'].forEach(id => { const el = document.getElementById(id); if(el) el.value = ''; });
+  ['m-opp','m-location','m-partner'].forEach(id => { const el = document.getElementById(id); if(el) el.value = ''; });
   ['m-worked','m-needs','m-notes'].forEach(id => { const el = document.getElementById(id); if(el) el.value = ''; });
   document.getElementById('m-date').value = today();
   document.getElementById('m-type').value = 'singles';
@@ -988,8 +1125,12 @@ function resetMatchForm() {
   document.getElementById('m-optional').style.display = 'none';
   document.getElementById('m-arr').textContent = '▸';
   setResult('win');
+  mFocusSelected = new Set();
+  resetScoreInputs();
+  renderFocusChips('m-focus-chips', mFocusSelected);
 }
 
+// ── Save practice ─────────────────────────────────────────────────────────────
 async function savePractice() {
   const btn = document.querySelector('#log-practice .save-log-btn');
   btn.textContent = 'Saving…'; btn.disabled = true;
@@ -998,10 +1139,12 @@ async function savePractice() {
     practiced_at: document.getElementById('p-date').value || today(),
     duration_minutes: parseInt(document.getElementById('p-duration').value) || 60,
     practice_type: document.getElementById('p-type').value,
-    focus_area: document.getElementById('p-focus').value || null,
+    focus_area: pFocusSelected.size > 0 ? Array.from(pFocusSelected)[0] : null,
+    focus_areas: pFocusSelected.size > 0 ? Array.from(pFocusSelected) : null,
     notes: document.getElementById('p-notes').value.trim() || null,
     next_goal: document.getElementById('p-goal').value.trim() || null,
   };
+  console.log('[Courtside] saving practice:', row);
   try {
     const saved = await sbFetch('/rest/v1/practices', 'POST', row);
     console.log('[Courtside] practice saved:', saved);
@@ -1022,7 +1165,8 @@ function resetPracticeForm() {
   document.getElementById('p-date').value = today();
   document.getElementById('p-duration').value = '60';
   document.getElementById('p-type').value = 'hitting';
-  document.getElementById('p-focus').value = '';
+  pFocusSelected = new Set();
+  renderFocusChips('p-focus-chips', pFocusSelected);
 }
 
 // ── Load entries ───────────────────────────────────────────────────────────────
@@ -1079,15 +1223,20 @@ function entryCard(e) {
   const title = isMatch ? `vs ${e.opponent}` : (e.practice_type || 'Practice');
   const meta = isMatch
     ? `${formatDate(e._date)}${e.location ? ' · ' + e.location : ''}`
-    : `${formatDate(e._date)} · ${e.duration_minutes ? e.duration_minutes + ' min' : ''}`;
-  const score = isMatch && e.score ? `<div class="entry-score">${e.score}</div>` : '';
+    : `${formatDate(e._date)}${e.duration_minutes ? ' · ' + e.duration_minutes + ' min' : ''}`;
+  const scoreStr = isMatch && e.score ? `<div class="entry-score">${e.score}</div>` : '';
+  const areas = (isMatch ? e.focus_areas : e.focus_areas) || [];
+  const chips = areas.length
+    ? `<div class="entry-chips">${areas.map(a => `<span class="entry-chip">${a}</span>`).join('')}</div>`
+    : '';
   return `<div class="entry-card ${cls}">
     <div class="entry-badge ${cls}">${badge}</div>
     <div style="flex:1;min-width:0;">
       <div class="entry-opp">${title}</div>
       <div class="entry-meta">${meta}</div>
+      ${chips}
     </div>
-    ${score}
+    ${scoreStr}
   </div>`;
 }
 
