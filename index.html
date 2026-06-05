@@ -1602,53 +1602,55 @@ function computeInsights() {
   return { focusRanked, focusCount, totalFocusSessions, last5, last5W, last5L, recentM, recentP, matches, practices };
 }
 
+// ── Resource card renderer ────────────────────────────────────────────────────
+function renderResourceCards(resources) {
+  if (!resources || !resources.length) return '';
+  return resources.slice(0, 2).map(r => `
+    <div class="resource-card">
+      <div class="resource-card-header">
+        <span class="resource-type-badge">${r.type}</span>
+        ${r.duration ? `<span class="resource-duration">${r.duration}</span>` : ''}
+      </div>
+      <div class="resource-title">${r.title}</div>
+      <div class="resource-desc">${r.description}</div>
+      ${r.cue ? `<div class="resource-cue">"${r.cue}"</div>` : ''}
+    </div>`).join('');
+}
+
 // ── Render improve page ───────────────────────────────────────────────────────
 function renderImprove() {
   const el = document.getElementById('improve-content');
-  if (!el) { console.warn('[Courtside] renderImprove — improve-content element not found'); return; }
-  const { focusRanked, focusCount, totalFocusSessions, last5, last5W, last5L, recentM, recentP, matches, practices } = computeInsights();
+  if (!el) { console.warn('[Courtside] renderImprove — element not found'); return; }
+  const { focusRanked, totalFocusSessions, last5, last5W, last5L, recentM, recentP, matches, practices } = computeInsights();
   const hasData = matches.length > 0 || practices.length > 0;
   const hasFocus = focusRanked.length > 0;
-  console.log('[Courtside] renderImprove — hasData:', hasData, 'hasFocus:', hasFocus, 'top focus:', focusRanked.slice(0,3).map(([f,c]) => f+':'+c));
+  console.log('[Courtside] renderImprove — matches:', matches.length, 'practices:', practices.length, 'hasFocus:', hasFocus, 'top3:', focusRanked.slice(0,3).map(([f,c])=>f+':'+c));
+
+  // Normalize focus area name for resource lookup (case-insensitive)
+  function lookupResource(area) {
+    if (!area) return null;
+    const key = Object.keys(IMPROVEMENT_RESOURCES).find(k => k.toLowerCase() === area.toLowerCase());
+    return key ? IMPROVEMENT_RESOURCES[key] : null;
+  }
 
   if (!hasData) {
     el.innerHTML = `
       <div class="insight-card">
         <div class="insight-label">Getting started</div>
         <div class="insight-value">Your improvement profile builds as you play.</div>
-        <div class="insight-sub" style="margin-top:6px;">Log your first match to start building your tennis profile.</div>
-      </div>
-      <div class="insight-card">
-        <div class="insight-label">Practice tracking</div>
-        <div class="insight-sub">Log a practice to track what you are working on.</div>
+        <div class="insight-sub" style="margin-top:6px;">Log a match and a practice to unlock your first insights.</div>
       </div>
       <div class="insight-card">
         <div class="insight-label">Focus area trends</div>
-        <div class="insight-sub">Add focus areas to your logs to unlock improvement trends.</div>
+        <div class="insight-sub">Add focus areas to your logs to unlock improvement trends and targeted drills.</div>
       </div>`;
+    console.log('[Courtside] renderImprove — showing empty state');
     return;
   }
 
   let html = '';
 
-  // A. Most common focus area
-  if (hasFocus) {
-    const [topArea, topCount] = focusRanked[0];
-    const resource = IMPROVEMENT_RESOURCES[topArea];
-    html += `<div class="insight-card">
-      <div class="insight-label">Most common focus area</div>
-      <div class="insight-value">${topArea}</div>
-      <div class="insight-sub">${topArea} appeared in ${topCount} of your last ${totalFocusSessions} session${totalFocusSessions !== 1 ? 's' : ''}.</div>
-      ${resource ? `<div class="resource-placeholder">Resources coming next: drills and practice plans for ${topArea}.</div>` : ''}
-    </div>`;
-  } else {
-    html += `<div class="insight-card">
-      <div class="insight-label">Most common focus area</div>
-      <div class="insight-sub">Add focus areas to your logs to see trends here.</div>
-    </div>`;
-  }
-
-  // B. Recent match trend
+  // A. Recent form
   if (last5.length > 0) {
     const trend = last5W > last5L ? 'Positive form' : last5W === last5L ? 'Even form' : 'Tough stretch';
     html += `<div class="insight-card">
@@ -1658,7 +1660,7 @@ function renderImprove() {
     </div>`;
   }
 
-  // C. Match / practice balance
+  // B. Match / practice balance
   html += `<div class="insight-card">
     <div class="insight-label">Match / practice balance (last 14 days)</div>
     <div class="insight-value">${recentM} match${recentM !== 1 ? 'es' : ''}, ${recentP} practice${recentP !== 1 ? 's' : ''}</div>
@@ -1671,19 +1673,32 @@ function renderImprove() {
     }</div>
   </div>`;
 
-  // D. Suggested next focus
-  if (focusRanked.length > 0) {
-    const top3 = focusRanked.slice(0, 3).map(([f]) => f);
+  // C. Focus area resource cards — top 3 with real drills
+  if (!hasFocus) {
     html += `<div class="insight-card">
-      <div class="insight-label">Suggested next focus</div>
-      <div class="insight-sub" style="margin-bottom:8px;">Based on your most-logged areas:</div>
-      <div class="insight-chips">${top3.map(f => `<span class="insight-chip">${f}</span>`).join('')}</div>
-      <div class="resource-placeholder" style="margin-top:10px;">Resources coming next: drills and practice plans for these focus areas.</div>
+      <div class="insight-label">Drills and practice ideas</div>
+      <div class="insight-value" style="font-size:15px;">Add focus areas to your logs</div>
+      <div class="insight-sub" style="margin-top:6px;">Select focus areas when logging a match or practice to unlock targeted drills here.</div>
     </div>`;
+  } else {
+    const top3 = focusRanked.slice(0, 3);
+    top3.forEach(([area, count]) => {
+      const resources = lookupResource(area);
+      html += `<div class="insight-card">
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;">
+          <div>
+            <div class="insight-label">Focus area</div>
+            <div class="insight-value" style="font-size:16px;">${area}</div>
+          </div>
+          <span style="font-size:11px;color:var(--ink3);">${count} session${count !== 1 ? 's' : ''}</span>
+        </div>
+        ${resources ? renderResourceCards(resources) : `<div style="font-size:12px;color:var(--ink3);font-style:italic;padding:8px 0;">Resource coming soon for ${area}.</div>`}
+      </div>`;
+    });
   }
 
-  // E. Focus area ranking
-  if (focusRanked.length > 0) {
+  // D. Focus area ranking
+  if (hasFocus) {
     const maxCount = focusRanked[0][1];
     const top8 = focusRanked.slice(0, 8);
     html += `<div class="insight-card">
@@ -1700,6 +1715,7 @@ function renderImprove() {
   }
 
   el.innerHTML = html;
+  console.log('[Courtside] renderImprove — done');
 }
 
 // ── Render home insights strip ────────────────────────────────────────────────
