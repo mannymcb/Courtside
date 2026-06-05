@@ -506,8 +506,8 @@ html, body { height: 100%; font-family: var(--font); background: var(--page); co
     <div style="margin-bottom:12px;">
       <div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.6px;color:var(--ink3);margin-bottom:8px;">What did you do today?</div>
       <div class="type-tabs" id="log-type-tabs">
-        <button class="ttab on" id="tt-match" onclick="goLogMatch()">🎾 Match play</button>
-        <button class="ttab" id="tt-practice" onclick="goLogPractice()">🏃 Practice</button>
+        <button type="button" class="ttab on" id="tt-match" onclick="setLogType('match')">🎾 Match play</button>
+        <button type="button" class="ttab" id="tt-practice" onclick="setLogType('practice')">🏃 Practice</button>
       </div>
     </div>
 
@@ -1214,13 +1214,23 @@ function toggleFocus(prefix, area, btn) {
   else { set.add(area); btn.classList.add('on'); }
 }
 
+let activeLogType = 'match';
 function setLogType(t) {
-  document.getElementById('tt-match').classList.toggle('on', t === 'match');
-  document.getElementById('tt-practice').classList.toggle('on', t === 'practice');
-  document.getElementById('log-match').style.display = t === 'match' ? 'block' : 'none';
-  document.getElementById('log-practice').style.display = t === 'practice' ? 'block' : 'none';
+  console.log('Log toggle clicked:', t);
+  activeLogType = t;
+  console.log('activeLogType:', activeLogType);
+  const ttMatch = document.getElementById('tt-match');
+  const ttPractice = document.getElementById('tt-practice');
+  const formMatch = document.getElementById('log-match');
+  const formPractice = document.getElementById('log-practice');
+  if (ttMatch) ttMatch.classList.toggle('on', t === 'match');
+  if (ttPractice) ttPractice.classList.toggle('on', t === 'practice');
+  if (formMatch) formMatch.style.display = t === 'match' ? 'block' : 'none';
+  if (formPractice) formPractice.style.display = t === 'practice' ? 'block' : 'none';
   window.scrollTo(0, 0);
 }
+function goLogMatch() { goLog(); setLogType('match'); }
+function goLogPractice() { goLog(); setLogType('practice'); }
 
 function setResult(r) {
   matchResult = r;
