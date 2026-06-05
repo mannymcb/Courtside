@@ -309,6 +309,9 @@ html, body { height: 100%; font-family: var(--font); background: var(--page); co
 .resource-title { font-size: 14px; font-weight: 700; color: var(--ink); margin-bottom: 4px; }
 .resource-desc { font-size: 13px; color: var(--ink2); line-height: 1.5; }
 .resource-cue { font-size: 12px; font-style: italic; color: var(--season-bg1); margin-top: 6px; font-weight: 600; }
+.resource-links { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 10px; }
+.resource-link-btn { font-size: 11px; font-weight: 600; color: var(--season-bg1); background: var(--surface); border: 1.5px solid var(--season-bg1); border-radius: 20px; padding: 4px 12px; text-decoration: none; white-space: nowrap; }
+.resource-link-btn:active { opacity: .7; }
 
 /* ── Home insight strip ── */
 .home-insight { background: var(--surface); border-radius: var(--r); padding: 13px 16px; margin-bottom: 12px; box-shadow: var(--shadow); border: 1px solid var(--border); display: flex; align-items: center; gap: 12px; }
@@ -1495,80 +1498,80 @@ function editPractice(id) {
 // ── Improvement resource map (v0.6 will link to real content) ────────────────
 const IMPROVEMENT_RESOURCES = {
   "First serve": [
-    { title: "Zone serve drill", type: "Drill", duration: "10 min", description: "Hit 10 serves wide, 10 to the body, 10 up the T. Track how many land in. Focus on one zone at a time.", cue: "Let the toss set the direction." },
-    { title: "Toss placement check", type: "Cue", duration: "5 min", description: "Toss to the same spot 10 times without swinging. The ball should land just inside your front foot.", cue: "Toss up, not forward." }
+    { title: "Zone serve drill", type: "Drill", duration: "10 min", description: "Hit 10 serves wide, 10 to the body, 10 up the T. Track how many land in. Focus on one zone at a time.", cue: "Let the toss set the direction.", links: [] },
+    { title: "Toss placement check", type: "Cue", duration: "5 min", description: "Toss to the same spot 10 times without swinging. The ball should land just inside your front foot.", cue: "Toss up, not forward.", links: [] }
   ],
   "Second serve": [
-    { title: "Spin serve target", type: "Drill", duration: "10 min", description: "Hit 20 second serves with heavy topspin. Aim for the center of the service box. Prioritize clearance over speed.", cue: "Brush up the back of the ball." },
-    { title: "Kick serve rally", type: "Drill", duration: "15 min", description: "Serve and play out the point. Treat each second serve as a full rally start, not a defensive shot.", cue: "Aggressive margin, not just safe." }
+    { title: "Spin serve target", type: "Drill", duration: "10 min", description: "Hit 20 second serves with heavy topspin. Aim for the center of the service box. Prioritize clearance over speed.", cue: "Brush up the back of the ball." , links: []},
+    { title: "Kick serve rally", type: "Drill", duration: "15 min", description: "Serve and play out the point. Treat each second serve as a full rally start, not a defensive shot.", cue: "Aggressive margin, not just safe." , links: []}
   ],
   "Return": [
-    { title: "Split-step return drill", type: "Drill", duration: "10 min", description: "Have a partner serve. Focus only on split-stepping as the ball is tossed. Block or chip the return — no winners.", cue: "Split as the server tosses." },
-    { title: "Short backswing cue", type: "Cue", duration: "5 min", description: "On fast serves, compact your backswing to half its normal size. Use the server's pace instead of creating your own.", cue: "Turn early, short swing." }
+    { title: "Split-step return drill", type: "Drill", duration: "10 min", description: "Have a partner serve. Focus only on split-stepping as the ball is tossed. Block or chip the return — no winners.", cue: "Split as the server tosses." , links: []},
+    { title: "Short backswing cue", type: "Cue", duration: "5 min", description: "On fast serves, compact your backswing to half its normal size. Use the server's pace instead of creating your own.", cue: "Turn early, short swing." , links: []}
   ],
   "Forehand": [
-    { title: "Depth target drill", type: "Drill", duration: "15 min", description: "Place a cone 3 feet inside the baseline. Rally crosscourt, aiming every ball past the cone. Count consecutive hits.", cue: "Drive through, not at the ball." },
-    { title: "Recovery reset", type: "Cue", duration: "5 min", description: "After every forehand, take one recovery step back toward the center. Drill this as a habit, not just when stretched.", cue: "Hit and recover together." }
+    { title: "Depth target drill", type: "Drill", duration: "15 min", description: "Place a cone 3 feet inside the baseline. Rally crosscourt, aiming every ball past the cone. Count consecutive hits.", cue: "Drive through, not at the ball." , links: []},
+    { title: "Recovery reset", type: "Cue", duration: "5 min", description: "After every forehand, take one recovery step back toward the center. Drill this as a habit, not just when stretched.", cue: "Hit and recover together." , links: []}
   ],
   "Backhand": [
-    { title: "Crosscourt consistency", type: "Drill", duration: "15 min", description: "Rally backhand crosscourt with a partner. Aim for 15 consecutive balls past the service line without error.", cue: "Contact in front, finish high." },
-    { title: "Contact point cue", type: "Cue", duration: "5 min", description: "Shadow swing 10 times focusing on contact point. For two-handed: both arms through the ball. For one-handed: shoulder turn is everything.", cue: "Turn shoulder, lead with elbow." }
+    { title: "Crosscourt consistency", type: "Drill", duration: "15 min", description: "Rally backhand crosscourt with a partner. Aim for 15 consecutive balls past the service line without error.", cue: "Contact in front, finish high." , links: []},
+    { title: "Contact point cue", type: "Cue", duration: "5 min", description: "Shadow swing 10 times focusing on contact point. For two-handed: both arms through the ball. For one-handed: shoulder turn is everything.", cue: "Turn shoulder, lead with elbow." , links: []}
   ],
   "Volleys": [
-    { title: "First volley target", type: "Drill", duration: "10 min", description: "Feed balls to your partner at the service line. They hit deep to your feet. Practice blocking the first volley deep crosscourt.", cue: "Short backswing, punch through." },
-    { title: "Close-and-hold", type: "Cue", duration: "5 min", description: "After a passing shot attempt, hold your net position. Practice not flinching backward. Commit to the volley.", cue: "Hold the net, move into the ball." }
+    { title: "First volley target", type: "Drill", duration: "10 min", description: "Feed balls to your partner at the service line. They hit deep to your feet. Practice blocking the first volley deep crosscourt.", cue: "Short backswing, punch through." , links: []},
+    { title: "Close-and-hold", type: "Cue", duration: "5 min", description: "After a passing shot attempt, hold your net position. Practice not flinching backward. Commit to the volley.", cue: "Hold the net, move into the ball." , links: []}
   ],
   "Overheads": [
-    { title: "Drop-step footwork", type: "Drill", duration: "10 min", description: "Have a partner lob. Practice drop-stepping immediately: right foot back first (for right-handers), then adjust. Do 15 reps.", cue: "Drop-step the moment it goes up." },
-    { title: "Scissor kick drill", type: "Drill", duration: "10 min", description: "On deep lobs, practice the scissor kick — jumping off one foot and landing on the other to generate power.", cue: "Jump off the back foot." }
+    { title: "Drop-step footwork", type: "Drill", duration: "10 min", description: "Have a partner lob. Practice drop-stepping immediately: right foot back first (for right-handers), then adjust. Do 15 reps.", cue: "Drop-step the moment it goes up." , links: []},
+    { title: "Scissor kick drill", type: "Drill", duration: "10 min", description: "On deep lobs, practice the scissor kick — jumping off one foot and landing on the other to generate power.", cue: "Jump off the back foot." , links: []}
   ],
   "Court movement": [
-    { title: "Spider drill", type: "Drill", duration: "10 min", description: "Place 5 balls at the four corners and center of the court. Sprint to each, touch it, return to center. Repeat 5 times.", cue: "Low and explosive off each step." },
-    { title: "Recovery line drill", type: "Drill", duration: "10 min", description: "After every shot in a rally, touch the center mark before the next ball is played. Forces active recovery.", cue: "Every shot ends with a recovery step." }
+    { title: "Spider drill", type: "Drill", duration: "10 min", description: "Place 5 balls at the four corners and center of the court. Sprint to each, touch it, return to center. Repeat 5 times.", cue: "Low and explosive off each step." , links: []},
+    { title: "Recovery line drill", type: "Drill", duration: "10 min", description: "After every shot in a rally, touch the center mark before the next ball is played. Forces active recovery.", cue: "Every shot ends with a recovery step." , links: []}
   ],
   "Footwork": [
-    { title: "Split-step timing drill", type: "Drill", duration: "10 min", description: "Rally with a partner. Both players must split-step as the opponent contacts the ball, every shot. Call it out if someone misses.", cue: "Land as they hit." },
-    { title: "Short court footwork", type: "Drill", duration: "15 min", description: "Play points inside the service boxes only. Focus on quick adjustments and staying on the balls of your feet.", cue: "Stay light, stay ready." }
+    { title: "Split-step timing drill", type: "Drill", duration: "10 min", description: "Rally with a partner. Both players must split-step as the opponent contacts the ball, every shot. Call it out if someone misses.", cue: "Land as they hit." , links: []},
+    { title: "Short court footwork", type: "Drill", duration: "15 min", description: "Play points inside the service boxes only. Focus on quick adjustments and staying on the balls of your feet.", cue: "Stay light, stay ready." , links: []}
   ],
   "Net play": [
-    { title: "Approach and close", type: "Drill", duration: "15 min", description: "Hit a deep approach shot, then move all the way to the net. Practice closing quickly after the approach, not stopping mid-court.", cue: "Approach deep, close fast." },
-    { title: "Angled volley drill", type: "Drill", duration: "10 min", description: "Stand at the net. Partner feeds wide. Hit angled volleys away from the center. Aim to put the ball out of reach.", cue: "Open the face, guide the angle." }
+    { title: "Approach and close", type: "Drill", duration: "15 min", description: "Hit a deep approach shot, then move all the way to the net. Practice closing quickly after the approach, not stopping mid-court.", cue: "Approach deep, close fast." , links: []},
+    { title: "Angled volley drill", type: "Drill", duration: "10 min", description: "Stand at the net. Partner feeds wide. Hit angled volleys away from the center. Aim to put the ball out of reach.", cue: "Open the face, guide the angle." , links: []}
   ],
   "Transition game": [
-    { title: "No-man's-land drill", type: "Drill", duration: "15 min", description: "Play points where you must decide after 3 shots: stay back or come in. Practice committing to the decision.", cue: "Decide early, commit fully." },
-    { title: "Approach shot pattern", type: "Tactic", duration: "10 min", description: "Hit a deep crosscourt rally ball, then attack a short ball down the line. Finish with a volley. Repeat 10 times.", cue: "Cross to open, down the line to close." }
+    { title: "No-man's-land drill", type: "Drill", duration: "15 min", description: "Play points where you must decide after 3 shots: stay back or come in. Practice committing to the decision.", cue: "Decide early, commit fully." , links: []},
+    { title: "Approach shot pattern", type: "Tactic", duration: "10 min", description: "Hit a deep crosscourt rally ball, then attack a short ball down the line. Finish with a volley. Repeat 10 times.", cue: "Cross to open, down the line to close." , links: []}
   ],
   "Shot selection": [
-    { title: "High-percentage rally", type: "Tactic", duration: "15 min", description: "Play crosscourt until you get a ball inside the service line. Only then go down the line or for a winner.", cue: "Wait for the short ball." },
-    { title: "Risk/reward checklist", type: "Checklist", duration: "5 min", description: "Before each practice, decide: today I hit 80% of shots crosscourt and only attack when I am inside the baseline.", cue: "Set your pattern before you play." }
+    { title: "High-percentage rally", type: "Tactic", duration: "15 min", description: "Play crosscourt until you get a ball inside the service line. Only then go down the line or for a winner.", cue: "Wait for the short ball." , links: []},
+    { title: "Risk/reward checklist", type: "Checklist", duration: "5 min", description: "Before each practice, decide: today I hit 80% of shots crosscourt and only attack when I am inside the baseline.", cue: "Set your pattern before you play." , links: []}
   ],
   "Consistency": [
-    { title: "20-ball rally target", type: "Drill", duration: "15 min", description: "Rally crosscourt with a partner. Count consecutive balls over the net without error. Target: 20 in a row.", cue: "Clear the net by 2 feet." },
-    { title: "Error tracking set", type: "Checklist", duration: "15 min", description: "Play a practice set. After each unforced error, say the type out loud: net, wide, long. Awareness drives improvement.", cue: "Name the error, fix the pattern." }
+    { title: "20-ball rally target", type: "Drill", duration: "15 min", description: "Rally crosscourt with a partner. Count consecutive balls over the net without error. Target: 20 in a row.", cue: "Clear the net by 2 feet." , links: []},
+    { title: "Error tracking set", type: "Checklist", duration: "15 min", description: "Play a practice set. After each unforced error, say the type out loud: net, wide, long. Awareness drives improvement.", cue: "Name the error, fix the pattern." , links: []}
   ],
   "Depth": [
-    { title: "Cone depth drill", type: "Drill", duration: "15 min", description: "Place cones 3 feet inside both baselines. Rally and aim every ball past the cone. Count how many hit the zone.", cue: "High net clearance creates depth." },
-    { title: "Depth cue", type: "Cue", duration: "5 min", description: "Aim your shots at the back fence, not the baseline. This mental cue naturally adds depth without over-swinging.", cue: "Aim at the fence, land at the line." }
+    { title: "Cone depth drill", type: "Drill", duration: "15 min", description: "Place cones 3 feet inside both baselines. Rally and aim every ball past the cone. Count how many hit the zone.", cue: "High net clearance creates depth." , links: []},
+    { title: "Depth cue", type: "Cue", duration: "5 min", description: "Aim your shots at the back fence, not the baseline. This mental cue naturally adds depth without over-swinging.", cue: "Aim at the fence, land at the line." , links: []}
   ],
   "Spin": [
-    { title: "Topspin rally drill", type: "Drill", duration: "15 min", description: "Rally crosscourt with heavy topspin. Let the ball bounce high. Focus on brushing up the back of the ball, not through it.", cue: "Low to high, brush the back." },
-    { title: "Slice backhand cue", type: "Cue", duration: "5 min", description: "For slice: high-to-low swing, open racquet face, contact under the ball. Practice 20 slow-motion shadow swings.", cue: "Cut through the back of the ball." }
+    { title: "Topspin rally drill", type: "Drill", duration: "15 min", description: "Rally crosscourt with heavy topspin. Let the ball bounce high. Focus on brushing up the back of the ball, not through it.", cue: "Low to high, brush the back." , links: []},
+    { title: "Slice backhand cue", type: "Cue", duration: "5 min", description: "For slice: high-to-low swing, open racquet face, contact under the ball. Practice 20 slow-motion shadow swings.", cue: "Cut through the back of the ball." , links: []}
   ],
   "Mental focus": [
-    { title: "Between-points reset", type: "Practice Plan", duration: "5 min", description: "Use the same 4-step routine between every point: (1) turn away, (2) take a breath, (3) set your strings, (4) walk to position.", cue: "Same routine, every point." },
-    { title: "One point at a time", type: "Cue", duration: "5 min", description: "After losing a point, say to yourself: next point only. Do not carry the previous point into the next one.", cue: "Short memory, full focus." }
+    { title: "Between-points reset", type: "Practice Plan", duration: "5 min", description: "Use the same 4-step routine between every point: (1) turn away, (2) take a breath, (3) set your strings, (4) walk to position.", cue: "Same routine, every point." , links: []},
+    { title: "One point at a time", type: "Cue", duration: "5 min", description: "After losing a point, say to yourself: next point only. Do not carry the previous point into the next one.", cue: "Short memory, full focus." , links: []}
   ],
   "Doubles positioning": [
-    { title: "Move with your partner", type: "Checklist", duration: "10 min", description: "In doubles, both players move together: one up, one up. One back, one back. Practice shadowing your partner during warmup.", cue: "Move as a unit, not alone." },
-    { title: "Poach timing drill", type: "Drill", duration: "10 min", description: "Net player poaches on every second shot from the opposing crosscourt player. Call the poach signal early: go or stay.", cue: "Decide before the ball is hit." }
+    { title: "Move with your partner", type: "Checklist", duration: "10 min", description: "In doubles, both players move together: one up, one up. One back, one back. Practice shadowing your partner during warmup.", cue: "Move as a unit, not alone." , links: []},
+    { title: "Poach timing drill", type: "Drill", duration: "10 min", description: "Net player poaches on every second shot from the opposing crosscourt player. Call the poach signal early: go or stay.", cue: "Decide before the ball is hit." , links: []}
   ],
   "Communication": [
-    { title: "Call every ball", type: "Checklist", duration: "10 min", description: "In every doubles rally, one partner calls mine or yours on every ball — no exceptions. Practice this in warmup before using in sets.", cue: "Loud and early, every time." },
-    { title: "Between-point chat", type: "Cue", duration: "5 min", description: "After every point in doubles, briefly touch racquets and exchange one word: good, next, or ready. Keeps energy up.", cue: "Stay connected with your partner." }
+    { title: "Call every ball", type: "Checklist", duration: "10 min", description: "In every doubles rally, one partner calls mine or yours on every ball — no exceptions. Practice this in warmup before using in sets.", cue: "Loud and early, every time." , links: []},
+    { title: "Between-point chat", type: "Cue", duration: "5 min", description: "After every point in doubles, briefly touch racquets and exchange one word: good, next, or ready. Keeps energy up.", cue: "Stay connected with your partner." , links: []}
   ],
   "Fitness": [
-    { title: "On-court interval sprints", type: "Practice Plan", duration: "15 min", description: "Sprint baseline to net and back, 10 reps. Rest 30 seconds. Repeat 3 sets. Simulate match movement, not gym cardio.", cue: "Explosive first step, controlled stop." },
-    { title: "Side-to-side shuffle", type: "Drill", duration: "10 min", description: "Shuffle sideline to sideline 10 times without crossing feet. Stay low and keep your weight forward.", cue: "Stay low, push off each step." }
+    { title: "On-court interval sprints", type: "Practice Plan", duration: "15 min", description: "Sprint baseline to net and back, 10 reps. Rest 30 seconds. Repeat 3 sets. Simulate match movement, not gym cardio.", cue: "Explosive first step, controlled stop." , links: []},
+    { title: "Side-to-side shuffle", type: "Drill", duration: "10 min", description: "Shuffle sideline to sideline 10 times without crossing feet. Stay low and keep your weight forward.", cue: "Stay low, push off each step." , links: []}
   ],
 };
 
@@ -1605,7 +1608,13 @@ function computeInsights() {
 // ── Resource card renderer ────────────────────────────────────────────────────
 function renderResourceCards(resources) {
   if (!resources || !resources.length) return '';
-  return resources.slice(0, 2).map(r => `
+  return resources.slice(0, 2).map(r => {
+    const links = (r.links || []).filter(l => l.url);
+    const linkHtml = links.length ? `
+      <div class="resource-links">
+        ${links.map(l => `<a href="${l.url}" target="_blank" rel="noopener noreferrer" class="resource-link-btn">${l.label || l.type}</a>`).join('')}
+      </div>` : '';
+    return `
     <div class="resource-card">
       <div class="resource-card-header">
         <span class="resource-type-badge">${r.type}</span>
@@ -1614,7 +1623,9 @@ function renderResourceCards(resources) {
       <div class="resource-title">${r.title}</div>
       <div class="resource-desc">${r.description}</div>
       ${r.cue ? `<div class="resource-cue">"${r.cue}"</div>` : ''}
-    </div>`).join('');
+      ${linkHtml}
+    </div>`;
+  }).join('');
 }
 
 // ── Render improve page ───────────────────────────────────────────────────────
