@@ -967,10 +967,18 @@ function openProfile() {
       </div>
       <div id="ep-err" style="color:#e74c3c;font-size:13px;margin-bottom:8px;display:none;"></div>
       <button class="save-btn" id="ep-save" onclick="saveProfileEdits()">Save changes</button>
+      <div style="display:flex;align-items:center;justify-content:space-between;padding:14px 0;border-top:1px solid var(--border);margin-top:10px;">
+        <div>
+          <div style="font-size:13px;font-weight:600;color:var(--ink);">Sound effects</div>
+          <div style="font-size:11px;color:var(--ink3);margin-top:1px;">Subtle pop after logging a match</div>
+        </div>
+        <button id="sound-toggle-btn" onclick="toggleSound()" style="width:44px;height:26px;border-radius:13px;border:none;cursor:pointer;font-size:0;position:relative;transition:background .2s;"></button>
+      </div>
       <button class="signout-btn" onclick="signOut()">Sign out</button>
     </div>
   `;
   document.getElementById('prof-overlay').classList.add('on');
+  updateSoundToggleUI();
 }
 
 function closeProfile() {
@@ -1006,6 +1014,79 @@ async function saveProfileEdits() {
     const errEl = document.getElementById('ep-err');
     errEl.textContent = 'Error: ' + err.message; errEl.style.display = 'block';
     btn.textContent = 'Save changes'; btn.disabled = false;
+  }
+}
+
+// ── Sound ────────────────────────────────────────────────────────────────────
+let soundEnabled = localStorage.getItem('courtside_sound_enabled') !== 'false';
+
+function toggleSound() {
+  soundEnabled = !soundEnabled;
+  localStorage.setItem('courtside_sound_enabled', soundEnabled ? 'true' : 'false');
+  updateSoundToggleUI();
+}
+
+function updateSoundToggleUI() {
+  const btn = document.getElementById('sound-toggle-btn');
+  if (!btn) return;
+  btn.style.background = soundEnabled ? 'var(--season-bg1)' : '#ccc';
+  btn.title = soundEnabled ? 'Sound on' : 'Sound off';
+  // Draw a small pill indicator
+  btn.innerHTML = `<span style="position:absolute;top:3px;width:20px;height:20px;border-radius:50%;background:#fff;box-shadow:0 1px 3px rgba(0,0,0,.2);transition:left .2s;left:${soundEnabled ? '21px' : '3px'};"></span>`;
+}
+
+function playTennisPopSound() {
+  if (!soundEnabled) return;
+  try {
+    const ctx = new (window.AudioContext || window.webkitAudioContext)();
+
+    // Layer 1: sharp transient click (ball impact)
+    const impactBuf = ctx.createBuffer(1, ctx.sampleRate * 0.04, ctx.sampleRate);
+    const impact = impactBuf.getChannelData(0);
+    for (let i = 0; i < impact.length; i++) {
+      const t = i / ctx.sampleRate;
+      // Short noise burst with fast exponential decay
+      impact[i] = (Math.random() * 2 - 1) * Math.exp(-t * 180);
+    }
+    const impactSrc = ctx.createBufferSource();
+    impactSrc.buffer = impactBuf;
+
+    // Layer 2: brief tonal resonance (string vibration)
+    const osc = ctx.createOscillator();
+    osc.type = 'sine';
+    osc.frequency.setValueAtTime(820, ctx.currentTime);
+    osc.frequency.exponentialRampToValueAtTime(440, ctx.currentTime + 0.08);
+
+    // Gain shaping
+    const impactGain = ctx.createGain();
+    impactGain.gain.setValueAtTime(0.45, ctx.currentTime);
+    impactGain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.04);
+
+    const oscGain = ctx.createGain();
+    oscGain.gain.setValueAtTime(0.12, ctx.currentTime);
+    oscGain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.18);
+
+    // High-pass filter to keep it crisp, not boomy
+    const hpf = ctx.createBiquadFilter();
+    hpf.type = 'highpass';
+    hpf.frequency.value = 300;
+
+    impactSrc.connect(impactGain);
+    impactGain.connect(hpf);
+    osc.connect(oscGain);
+    oscGain.connect(hpf);
+    hpf.connect(ctx.destination);
+
+    impactSrc.start(ctx.currentTime);
+    impactSrc.stop(ctx.currentTime + 0.04);
+    osc.start(ctx.currentTime);
+    osc.stop(ctx.currentTime + 0.18);
+
+    // Clean up after sound ends
+    setTimeout(() => ctx.close(), 400);
+  } catch(e) {
+    // Fail silently — audio blocked or unavailable
+    console.log('[Courtside] audio unavailable:', e.message);
   }
 }
 
@@ -1177,6 +1258,7 @@ async function saveMatch() {
     }
     resetMatchForm();
     await loadAppData();
+    if (!editingMatchId) playTennisPopSound();
     showToast(editingMatchId ? 'Match updated ✓' : 'Match saved! 🎾');
     goPage('home', document.getElementById('nb-home'));
   } catch(err) {
@@ -1657,6 +1739,7 @@ function showToast(msg) {
 
 // ── Init ──────────────────────────────────────────────────────────────────────
 setSeason();
+updateSoundToggleUI();
 showScreen('auth-screen'); // safe default — always start here visually
 
 (async () => {
