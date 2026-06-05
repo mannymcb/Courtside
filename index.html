@@ -924,7 +924,10 @@ function goPage(p, btn) {
   document.getElementById('page-' + p).classList.add('on');
   btn.classList.add('on');
   window.scrollTo(0, 0);
-  if (p === 'improve') renderImprove();
+  if (p === 'improve') {
+    renderImprove();
+    console.log('[Courtside] goPage improve — allEntries length:', allEntries.length);
+  }
 }
 
 // ── Profile sheet ─────────────────────────────────────────────────────────────
@@ -1573,6 +1576,8 @@ const IMPROVEMENT_RESOURCES = {
 function computeInsights() {
   const matches = allEntries.filter(e => e._kind === 'match');
   const practices = allEntries.filter(e => e._kind === 'practice');
+  const allFocusAreas = [...matches, ...practices].flatMap(e => e.focus_areas || []);
+  console.log('[Courtside] computeInsights — matches:', matches.length, 'practices:', practices.length, 'total focus areas:', allFocusAreas.length, 'sample:', allFocusAreas.slice(0,5));
   const now = new Date();
   const d14 = new Date(now - 14 * 864e5).toISOString().slice(0, 10);
   const d30 = new Date(now - 30 * 864e5).toISOString().slice(0, 10);
@@ -1600,10 +1605,11 @@ function computeInsights() {
 // ── Render improve page ───────────────────────────────────────────────────────
 function renderImprove() {
   const el = document.getElementById('improve-content');
-  if (!el) return;
-  const { focusRanked, focusCount, totalFocusSessions, last5, last5W, last5L, recentM, recentP, matches } = computeInsights();
-  const hasData = matches.length > 0;
+  if (!el) { console.warn('[Courtside] renderImprove — improve-content element not found'); return; }
+  const { focusRanked, focusCount, totalFocusSessions, last5, last5W, last5L, recentM, recentP, matches, practices } = computeInsights();
+  const hasData = matches.length > 0 || practices.length > 0;
   const hasFocus = focusRanked.length > 0;
+  console.log('[Courtside] renderImprove — hasData:', hasData, 'hasFocus:', hasFocus, 'top focus:', focusRanked.slice(0,3).map(([f,c]) => f+':'+c));
 
   if (!hasData) {
     el.innerHTML = `
@@ -1749,9 +1755,10 @@ async function loadEntries() {
     const m = (Array.isArray(matches) ? matches : []).map(r => ({ ...r, _kind: 'match', _date: r.played_at }));
     const p = (Array.isArray(practices) ? practices : []).map(r => ({ ...r, _kind: 'practice', _date: r.practiced_at }));
     allEntries = [...m, ...p].sort((a, b) => b._date.localeCompare(a._date));
-    console.log('[Courtside] entries loaded — matches:', m.length, 'practices:', p.length);
-    renderHome();
+    console.log('[Courtside] entries loaded — matches:', m.length, 'practices:', p.length, 'total:', allEntries.length);
+    renderHome();       // also calls renderImprove internally
     renderActivity();
+    renderImprove();    // explicit call to ensure Improve tab is always current
   } catch(err) {
     console.error('[Courtside] load entries error:', err.message);
   }
