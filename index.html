@@ -448,14 +448,14 @@ html, body { height: 100%; font-family: var(--font); background: var(--page); co
       <button class="chip" onclick="setFilter('win',this)">Wins</button>
       <button class="chip" onclick="setFilter('loss',this)">Losses</button>
     </div>
-    <div id="activity-list"><div class="empty-state">No entries yet — tap Log to record your first match.</div></div>
+    <div id="activity-list"><div class="empty-state" style="padding:32px 16px;"><div style="font-size:15px;font-weight:700;color:var(--ink);margin-bottom:6px;">No activity yet</div><div style="font-size:13px;color:var(--ink3);line-height:1.6;">Log a match or practice to track your progress over time.</div></div></div>
   </div>
 
   <div class="page" id="page-club">
     <div class="coming-soon">
       <div class="cs-icon">🏟️</div>
-      <div class="cs-title" id="club-page-title">Club coming in v0.4</div>
-      <div class="cs-sub">Connect with club members, share results, form teams, and chat.</div>
+      <div class="cs-title" id="club-page-title">Club coming soon</div>
+      <div class="cs-sub">Connect with members at your club, share results, and form teams.</div>
     </div>
   </div>
 
@@ -563,6 +563,7 @@ html, body { height: 100%; font-family: var(--font); background: var(--page); co
           <div class="lf"><label>Notes</label><textarea id="m-notes" rows="2" placeholder="Any other thoughts…"></textarea></div>
         </div>
       </div>
+      <div id="m-save-err" style="color:#e74c3c;font-size:13px;margin-bottom:8px;display:none;padding:0 2px;"></div>
       <button class="save-log-btn" onclick="saveMatch()">Save match</button>
     </div>
 
@@ -608,6 +609,7 @@ html, body { height: 100%; font-family: var(--font); background: var(--page); co
         <div class="lf"><label>Notes</label><textarea id="p-notes" rows="2" placeholder="What did you work on?"></textarea></div>
         <div class="lf"><label>Next goal</label><textarea id="p-goal" rows="2" placeholder="What do you want to improve next?"></textarea></div>
       </div>
+      <div id="p-save-err" style="color:#e74c3c;font-size:13px;margin-bottom:8px;display:none;padding:0 2px;"></div>
       <button class="save-log-btn" onclick="savePractice()">Save practice</button>
     </div>
   </div>
@@ -722,7 +724,7 @@ async function signIn() {
     session = { access_token: data.access_token, refresh_token: data.refresh_token, user: data.user };
     store('cs_session', session);
     console.log('[Courtside] signed in, user id:', session.user?.id);
-    await fetchAndRouteProfile();
+    await initializeApp();
   } catch(err) {
     setAuthErr(err.message || 'Sign in failed.');
   } finally {
@@ -745,7 +747,7 @@ async function signUp() {
     session = { access_token: token, refresh_token: data.refresh_token || data.session?.refresh_token, user };
     store('cs_session', session);
     console.log('[Courtside] signed up, user id:', session.user?.id);
-    await fetchAndRouteProfile();
+    await initializeApp();
   } catch(err) {
     setAuthErr(err.message || 'Sign up failed.');
   } finally {
@@ -990,7 +992,7 @@ function openProfile() {
       <div style="display:flex;align-items:center;justify-content:space-between;padding:14px 0;border-top:1px solid var(--border);margin-top:10px;">
         <div>
           <div style="font-size:13px;font-weight:600;color:var(--ink);">Sound effects</div>
-          <div style="font-size:11px;color:var(--ink3);margin-top:1px;">Subtle pop after logging a match</div>
+          <div style="font-size:11px;color:var(--ink3);margin-top:1px;">Subtle pop after logging a match (off by default)</div>
         </div>
         <button id="sound-toggle-btn" onclick="toggleSound()" style="width:44px;height:26px;border-radius:13px;border:none;cursor:pointer;font-size:0;position:relative;transition:background .2s;"></button>
       </div>
@@ -1038,7 +1040,7 @@ async function saveProfileEdits() {
 }
 
 // ── Sound ────────────────────────────────────────────────────────────────────
-let soundEnabled = localStorage.getItem('courtside_sound_enabled') !== 'false';
+let soundEnabled = localStorage.getItem('courtside_sound_enabled') === 'true'; // off by default
 
 function toggleSound() {
   soundEnabled = !soundEnabled;
@@ -1149,6 +1151,7 @@ function goLog() {
   document.getElementById('p-date').value = today();
   renderFocusChips('m-focus-chips', mFocusSelected);
   renderFocusChips('p-focus-chips', pFocusSelected);
+  const pErr = document.getElementById('p-save-err'); if(pErr) { pErr.style.display='none'; pErr.textContent=''; }
 }
 
 function renderFocusChips(containerId, selected) {
@@ -1302,7 +1305,9 @@ async function saveMatch() {
     goPage('home', document.getElementById('nb-home'));
   } catch(err) {
     console.error('[Courtside] match save error:', err.message);
-    showToast('Error: ' + err.message);
+    const errEl = document.getElementById('m-save-err');
+    if (errEl) { errEl.textContent = 'Save failed: ' + err.message; errEl.style.display = 'block'; }
+    showToast('Could not save match');
   } finally {
     btn.textContent = 'Save match'; btn.disabled = false;
   }
@@ -1328,6 +1333,7 @@ function resetMatchForm() {
   mFocusSelected = new Set();
   resetScoreInputs();
   renderFocusChips('m-focus-chips', mFocusSelected);
+  const mErr = document.getElementById('m-save-err'); if(mErr) { mErr.style.display='none'; mErr.textContent=''; }
 }
 
 // ── Save practice ─────────────────────────────────────────────────────────────
@@ -1358,7 +1364,9 @@ async function savePractice() {
     goPage('home', document.getElementById('nb-home'));
   } catch(err) {
     console.error('[Courtside] practice save error:', err.message);
-    showToast('Error: ' + err.message);
+    const errEl = document.getElementById('p-save-err');
+    if (errEl) { errEl.textContent = 'Save failed: ' + err.message; errEl.style.display = 'block'; }
+    showToast('Could not save practice');
   } finally {
     btn.textContent = 'Save practice'; btn.disabled = false;
   }
@@ -1529,7 +1537,15 @@ function renderImprove() {
       <div class="insight-card">
         <div class="insight-label">Getting started</div>
         <div class="insight-value">Your improvement profile builds as you play.</div>
-        <div class="insight-sub" style="margin-top:6px;">Log a match and a practice to unlock your first insights.</div>
+        <div class="insight-sub" style="margin-top:6px;">Log your first match to start building your tennis profile.</div>
+      </div>
+      <div class="insight-card">
+        <div class="insight-label">Practice tracking</div>
+        <div class="insight-sub">Log a practice to track what you are working on.</div>
+      </div>
+      <div class="insight-card">
+        <div class="insight-label">Focus area trends</div>
+        <div class="insight-sub">Add focus areas to your logs to unlock improvement trends.</div>
       </div>`;
     return;
   }
@@ -1684,14 +1700,18 @@ function renderHome() {
     if (e.result === 'win') streak++; else break;
   }
   document.getElementById('ws-matches').textContent = weekMatches.length || '—';
-  document.getElementById('ws-wins').textContent = weekWins || '—';
+  document.getElementById('ws-wins').textContent = weekMatches.length ? `${weekWins}–${weekMatches.length - weekWins}` : '—';
   document.getElementById('ws-practice').textContent = weekPractice || '—';
   document.getElementById('ws-streak').textContent = streak ? streak + '🔥' : '—';
+
+  // Update "Wins" label to "W–L" when we have match data
+  const winsLbl = document.querySelector('#ws-wins')?.closest('.wstat')?.querySelector('.wstat-lbl');
+  if (winsLbl) winsLbl.textContent = weekMatches.length ? 'W–L' : 'Wins';
   // Recent
   const recent = allEntries.slice(0, 5);
   document.getElementById('home-recent').innerHTML = recent.length
     ? recent.map(entryCard).join('')
-    : '<div class="empty-state">Nothing logged yet.<br>Tap <strong>＋ LOG</strong> to record your first match.</div>';
+    : '<div class="empty-state" style="padding:32px 16px;"><div style="font-size:36px;margin-bottom:12px;">🎾</div><div style="font-size:15px;font-weight:700;color:var(--ink);margin-bottom:6px;">Log your first match</div><div style="font-size:13px;color:var(--ink3);line-height:1.6;margin-bottom:18px;">Track results, score, and what you worked on to start building your tennis profile.</div><button onclick="goLog()" style="background:var(--season-bg1);color:#fff;border:none;border-radius:var(--r);padding:12px 24px;font-family:var(--font);font-size:14px;font-weight:700;cursor:pointer;">Log a match</button></div>';
   renderHomeInsights();
   renderImprove();
 }
@@ -1715,6 +1735,8 @@ function entryCard(e) {
   const meta = metaParts.join(' · ');
   const scoreStr = isMatch ? (formatScore(e) ? `<div class="entry-score">${formatScore(e)}</div>` : '') : '';
   const areas = e.focus_areas || [];
+  // Build sub-line: partner + focus areas
+  const partnerLine = isMatch && e.partner ? `<div class="entry-meta" style="margin-top:2px;">Partner: ${e.partner}</div>` : '';
   const chips = areas.length
     ? `<div class="entry-chips">${areas.map(a => `<span class="entry-chip">${a}</span>`).join('')}</div>`
     : '';
@@ -1724,6 +1746,7 @@ function entryCard(e) {
     <div style="flex:1;min-width:0;">
       <div class="entry-opp">${title}</div>
       <div class="entry-meta">${meta}</div>
+      ${partnerLine}
       ${chips}
     </div>
     <div style="display:flex;flex-direction:column;align-items:flex-end;gap:4px;flex-shrink:0;">
@@ -1794,53 +1817,94 @@ function showToast(msg) {
 // ── Init ──────────────────────────────────────────────────────────────────────
 setSeason();
 updateSoundToggleUI();
-showScreen('auth-screen'); // safe default — always start here visually
+showScreen('auth-screen'); // safe default
 
-(async () => {
-  showLoading('Starting up…');
-  console.log('[Courtside] init start');
+// Single shared function — runs on load, after sign-in, after save
+async function initializeApp() {
+  showLoading('Loading…');
+  console.log('[Courtside] initializeApp start');
 
   const cachedSession = load('cs_session');
   const cachedProfile = load('cs_profile');
 
-  // Fast path: valid cached profile with a name
+  // Step 1: Paint UI immediately from cache so there's no blank flash
   if (cachedProfile?.full_name && cachedProfile?.id) {
-    console.log('[Courtside] found cached profile:', cachedProfile.full_name);
     profile = cachedProfile;
     session = cachedSession || null;
-    hideLoading();
     showScreen('app-shell');
     updateHero();
-    // Refresh from Supabase in background
-    if (session?.access_token) {
-      try {
-        const rows = await sbFetch(`/rest/v1/profiles?id=eq.${profile.id}&select=*&limit=1`);
-        console.log('[Courtside] background refresh result:', rows);
-        if (rows?.[0]?.full_name) {
-          profile = rows[0];
-          store('cs_profile', profile);
-          updateHero();
-        }
-      } catch(e) { console.warn('[Courtside] background refresh failed:', e.message); }
-      // Also refresh app data in background
-      loadAppData().catch(() => {});
-    }
-    return;
+    console.log('[Courtside] fast paint from cache:', cachedProfile.full_name);
   }
 
-  // No cached profile — need a session to proceed
+  // Step 2: Validate session — try to refresh if expired
   if (!cachedSession?.access_token) {
-    console.log('[Courtside] no session, showing auth');
+    console.log('[Courtside] no session token — showing auth');
     hideLoading();
     showScreen('auth-screen');
     return;
   }
 
   session = cachedSession;
-  console.log('[Courtside] session found, user id:', session.user?.id);
+
+  // Step 3: Try to refresh the token if it might be stale
+  try {
+    if (cachedSession.refresh_token) {
+      const refreshRes = await fetch(SUPA_URL + '/auth/v1/token?grant_type=refresh_token', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'apikey': SUPA_ANON },
+        body: JSON.stringify({ refresh_token: cachedSession.refresh_token }),
+      });
+      if (refreshRes.ok) {
+        const refreshData = await refreshRes.json();
+        if (refreshData.access_token) {
+          session = {
+            access_token: refreshData.access_token,
+            refresh_token: refreshData.refresh_token || cachedSession.refresh_token,
+            user: refreshData.user || cachedSession.user,
+          };
+          store('cs_session', session);
+          console.log('[Courtside] token refreshed for user:', session.user?.id);
+        }
+      }
+    }
+  } catch(e) {
+    console.warn('[Courtside] token refresh failed, using cached:', e.message);
+  }
+
+  // Step 4: Fetch fresh profile from Supabase
+  try {
+    const rows = await sbFetch(`/rest/v1/profiles?id=eq.${session.user?.id}&select=*&limit=1`);
+    console.log('[Courtside] profile fetch:', rows);
+    if (rows?.[0]?.full_name) {
+      profile = rows[0];
+      store('cs_profile', profile);
+      showScreen('app-shell');
+      updateHero();
+    } else if (!cachedProfile?.full_name) {
+      // No profile yet — show setup
+      hideLoading();
+      showScreen('profile-setup');
+      renderSetup(session.user?.id);
+      return;
+    }
+  } catch(e) {
+    console.warn('[Courtside] profile fetch failed:', e.message);
+    if (!cachedProfile?.full_name) {
+      hideLoading();
+      renderProfileError(e.message);
+      return;
+    }
+    // Continue with cached profile
+  }
+
+  // Step 5: Load all app data (matches, practices, insights)
   hideLoading();
-  await fetchAndRouteProfile();
-})();
+  await loadAppData();
+  console.log('[Courtside] initializeApp complete');
+}
+
+// Run on page load
+(async () => { await initializeApp(); })();
 </script>
 </body>
 </html>
