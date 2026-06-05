@@ -451,28 +451,14 @@ html, body { height: 100%; font-family: var(--font); background: var(--page); co
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M2 3h6a4 4 0 014 4v14a3 3 0 00-3-3H2z"/><path d="M22 3h-6a4 4 0 00-4 4v14a3 3 0 013-3h7z"/></svg>
       Improve
     </button>
-    <button class="nb" id="nb-profile" onclick="openProfile()">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="8" r="4"/><path d="M4 20c0-4 3.6-7 8-7s8 3 8 7"/></svg>
-      Profile
+    <button class="nb" id="nb-club" onclick="goPage('club',this)">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 00-3-3.87"/><path d="M16 3.13a4 4 0 010 7.75"/></svg>
+      Club
     </button>
   </nav>
 
   <!-- PAGES -->
   <div class="page on" id="page-home">
-    <!-- Log prompt -->
-    <div class="log-prompt">
-      <div class="log-prompt-label">What did you do today?</div>
-      <div class="log-prompt-btns">
-        <button class="log-prompt-btn primary" onclick="goLogMatch()">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M 3 9 C 7 13 7 11 3 15"/><path d="M 21 9 C 17 13 17 11 21 15"/><path d="M 9 3 C 12 7 12 7 15 3"/><path d="M 9 21 C 12 17 12 17 15 21"/></svg>
-          Match play
-        </button>
-        <button class="log-prompt-btn" onclick="goLogPractice()">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>
-          Practice
-        </button>
-      </div>
-    </div>
     <!-- Week stats -->
     <div class="card" id="home-stats-card">
       <div class="card-title">This week</div>
@@ -489,9 +475,23 @@ html, body { height: 100%; font-family: var(--font); background: var(--page); co
       <button onclick="goPage('activity',document.getElementById('nb-activity'))" style="font-size:12px;font-weight:600;color:var(--season-bg1);background:none;border:none;cursor:pointer;font-family:var(--font);">View all →</button>
     </div>
     <div id="home-recent"></div>
-  </div>
+  </div>  </div>
 
   <div class="page" id="page-activity">
+    <!-- Log prompt -->
+    <div class="log-prompt" style="margin-bottom:14px;">
+      <div class="log-prompt-label">What did you do today?</div>
+      <div class="log-prompt-btns">
+        <button class="log-prompt-btn primary" onclick="goLogMatch()">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M3 9c4 4 4 2 0 6"/><path d="M21 9c-4 4-4 2 0 6"/><path d="M9 3c3 4 3 4 6 0"/><path d="M9 21c3-4 3-4 6 0"/></svg>
+          Match play
+        </button>
+        <button class="log-prompt-btn" onclick="goLogPractice()">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>
+          Practice
+        </button>
+      </div>
+    </div>
     <div class="chip-row">
       <button class="chip on" onclick="setFilter('all',this)">All</button>
       <button class="chip" onclick="setFilter('match',this)">Matches</button>
@@ -501,6 +501,14 @@ html, body { height: 100%; font-family: var(--font); background: var(--page); co
   </div>
 
 
+
+  <div class="page" id="page-club">
+    <div class="coming-soon">
+      <div class="cs-icon" style="font-size:32px;margin-bottom:10px;">🏟️</div>
+      <div class="cs-title">Club features coming soon</div>
+      <div class="cs-sub">Connect with members at your club, share results, and form teams.</div>
+    </div>
+  </div>
 
   <div class="page" id="page-improve">
     <div id="improve-content"></div>
