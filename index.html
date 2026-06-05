@@ -519,6 +519,7 @@ html, body { height: 100%; font-family: var(--font); background: var(--page); co
           </select>
         </div>
         <div class="lf" id="m-partner-row" style="display:none;"><label>Partner</label><input id="m-partner" type="text" placeholder="Partner name"></div>
+        <div class="lf"><label>Opponent club <span style="font-weight:400;color:var(--ink4);">(optional)</span></label><input id="m-opp-club" type="text" placeholder="e.g. Seattle Tennis Club" autocomplete="off"></div>
         <div class="lf"><label>Location</label><input id="m-location" type="text" placeholder="Club or court name"></div>
       </div>
 
@@ -1286,6 +1287,7 @@ async function saveMatch() {
     score,
     score_sets,
     focus_areas: mFocusSelected.size > 0 ? Array.from(mFocusSelected) : null,
+    opponent_club: document.getElementById('m-opp-club')?.value.trim() || null,
     location: document.getElementById('m-location').value.trim() || null,
     worked_well: document.getElementById('m-worked')?.value.trim() || null,
     needs_work: document.getElementById('m-needs')?.value.trim() || null,
@@ -1317,7 +1319,7 @@ async function saveMatch() {
 
 function resetMatchForm() {
   editingMatchId = null;
-  ['m-opp','m-location','m-partner'].forEach(id => { const el = document.getElementById(id); if(el) el.value = ''; });
+  ['m-opp','m-opp-club','m-location','m-partner'].forEach(id => { const el = document.getElementById(id); if(el) el.value = ''; });
   ['m-worked','m-needs','m-notes'].forEach(id => { const el = document.getElementById(id); if(el) el.value = ''; });
   document.getElementById('m-date').value = today();
   document.getElementById('m-type').value = 'singles';
@@ -1444,6 +1446,7 @@ function editMatch(id) {
     document.getElementById('m-optional').style.display = 'block';
     document.getElementById('m-arr').textContent = '▾';
   }
+  if (document.getElementById('m-opp-club')) document.getElementById('m-opp-club').value = e.opponent_club || '';
   if (document.getElementById('m-worked')) document.getElementById('m-worked').value = e.worked_well || '';
   if (document.getElementById('m-needs')) document.getElementById('m-needs').value = e.needs_work || '';
   if (document.getElementById('m-notes')) document.getElementById('m-notes').value = e.notes || '';
@@ -1722,7 +1725,7 @@ function entryCard(e) {
   const isMatch = e._kind === 'match';
   const cls = isMatch ? (e.result === 'win' ? 'win' : 'loss') : 'practice';
   const badge = isMatch ? (e.result === 'win' ? 'W' : 'L') : 'P';
-  const title = isMatch ? `vs ${e.opponent}` : (e.practice_type || 'Practice');
+  const title = isMatch ? `vs ${e.opponent}` : practiceTypeLabel(e.practice_type);
   // Build context line: Division · Line · Date · Location
   let metaParts = [];
   if (isMatch) {
@@ -1747,6 +1750,7 @@ function entryCard(e) {
     <div class="entry-badge ${cls}">${badge}</div>
     <div style="flex:1;min-width:0;">
       <div class="entry-opp">${title}</div>
+      ${isMatch && e.opponent_club ? `<div class="entry-meta" style="margin-top:1px;font-weight:500;color:var(--ink2);">${e.opponent_club}</div>` : ''}
       <div class="entry-meta">${meta}</div>
       ${partnerLine}
       ${chips}
@@ -1762,6 +1766,21 @@ function formatDate(d) {
   if (!d) return '';
   const [y, m, day] = d.split('-').map(Number);
   return new Date(y, m-1, day).toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' });
+}
+
+const PRACTICE_TYPE_LABELS = {
+  'hitting': 'Hitting',
+  'drilling': 'Drilling',
+  'match-play': 'Match play',
+  'lesson': 'Lesson',
+  'fitness': 'Fitness',
+  'serving': 'Serve practice',
+  'other': 'Practice',
+};
+
+function practiceTypeLabel(type) {
+  if (!type) return 'Practice';
+  return PRACTICE_TYPE_LABELS[type] || type.charAt(0).toUpperCase() + type.slice(1);
 }
 
 function formatScore(match) {
