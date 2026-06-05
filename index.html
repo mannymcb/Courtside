@@ -491,11 +491,31 @@ html, body { height: 100%; font-family: var(--font); background: var(--page); co
         <div class="sl">Match details</div>
         <div class="lf"><label>Opponent</label><input id="m-opp" type="text" placeholder="Name" autocomplete="off"></div>
         <div class="lf"><label>Date</label><input id="m-date" type="date"></div>
-        <div class="lf"><label>Match type</label>
-          <select id="m-type" onchange="onTypeChange()">
-            <option value="singles">Singles</option>
-            <option value="doubles">Doubles</option>
-            <option value="mixed">Mixed doubles</option>
+        <div style="display:flex;gap:10px;">
+          <div class="lf" style="flex:1;margin-bottom:12px;"><label>Match type</label>
+            <select id="m-type" onchange="onTypeChange()">
+              <option value="singles">Singles</option>
+              <option value="doubles">Doubles</option>
+              <option value="mixed">Mixed</option>
+            </select>
+          </div>
+          <div class="lf" style="flex:1;margin-bottom:12px;"><label>Division</label>
+            <select id="m-division">
+              <option value="">—</option>
+              <option value="Men's">Men's</option>
+              <option value="Women's">Women's</option>
+              <option value="Mixed">Mixed</option>
+              <option value="Open">Open</option>
+            </select>
+          </div>
+        </div>
+        <div class="lf" id="m-line-row"><label>Line position <span style="font-weight:400;color:var(--ink4);">(optional)</span></label>
+          <select id="m-line">
+            <option value="">—</option>
+            <option value="Singles 1">Singles 1</option>
+            <option value="Singles 2">Singles 2</option>
+            <option value="Singles 3">Singles 3</option>
+            <option value="Other">Other</option>
           </select>
         </div>
         <div class="lf" id="m-partner-row" style="display:none;"><label>Partner</label><input id="m-partner" type="text" placeholder="Partner name"></div>
@@ -1160,8 +1180,23 @@ function setResult(r) {
 }
 
 function onTypeChange() {
-  const isDoubles = ['doubles','mixed'].includes(document.getElementById('m-type').value);
+  const type = document.getElementById('m-type').value;
+  const isDoubles = ['doubles','mixed'].includes(type);
   document.getElementById('m-partner-row').style.display = isDoubles ? 'block' : 'none';
+  updateLineOptions(type);
+}
+
+function updateLineOptions(type) {
+  const sel = document.getElementById('m-line');
+  if (!sel) return;
+  const isDoubles = ['doubles','mixed'].includes(type);
+  const current = sel.value;
+  const opts = isDoubles
+    ? ['', 'Doubles 1', 'Doubles 2', 'Doubles 3', 'Other']
+    : ['', 'Singles 1', 'Singles 2', 'Singles 3', 'Other'];
+  sel.innerHTML = opts.map(o => `<option value="${o}">${o || '—'}</option>`).join('');
+  // Restore selection if still valid
+  if (opts.includes(current)) sel.value = current;
 }
 
 function toggleOptional(id, arrId) {
@@ -1233,11 +1268,15 @@ async function saveMatch() {
   const btn = document.querySelector('#log-match .save-log-btn');
   btn.textContent = 'Saving…'; btn.disabled = true;
   const { score, score_sets } = buildScore();
+  const matchType = document.getElementById('m-type').value;
+  const isDoubles = ['doubles','mixed'].includes(matchType);
   const data = {
     played_at: document.getElementById('m-date').value || today(),
-    match_type: document.getElementById('m-type').value,
+    match_type: matchType,
+    division: document.getElementById('m-division')?.value || null,
+    line_position: document.getElementById('m-line')?.value || null,
     opponent: opp,
-    partner: document.getElementById('m-partner')?.value.trim() || null,
+    partner: isDoubles ? (document.getElementById('m-partner')?.value.trim() || null) : null,
     result: matchResult,
     score,
     score_sets,
@@ -1275,7 +1314,9 @@ function resetMatchForm() {
   ['m-worked','m-needs','m-notes'].forEach(id => { const el = document.getElementById(id); if(el) el.value = ''; });
   document.getElementById('m-date').value = today();
   document.getElementById('m-type').value = 'singles';
+  if (document.getElementById('m-division')) document.getElementById('m-division').value = '';
   document.getElementById('m-partner-row').style.display = 'none';
+  updateLineOptions('singles');
   document.getElementById('m-optional').style.display = 'none';
   document.getElementById('m-arr').textContent = '▸';
   // Reset log header
@@ -1363,10 +1404,14 @@ function editMatch(id) {
   document.getElementById('m-date').value = e.played_at || today();
   document.getElementById('m-opp').value = e.opponent || '';
   document.getElementById('m-location').value = e.location || '';
-  document.getElementById('m-type').value = e.match_type || 'singles';
-  const isDoubles = ['doubles','mixed'].includes(e.match_type);
+  const eType = e.match_type || 'singles';
+  document.getElementById('m-type').value = eType;
+  updateLineOptions(eType);
+  const isDoubles = ['doubles','mixed'].includes(eType);
   document.getElementById('m-partner-row').style.display = isDoubles ? 'block' : 'none';
   document.getElementById('m-partner').value = e.partner || '';
+  if (document.getElementById('m-division')) document.getElementById('m-division').value = e.division || '';
+  if (document.getElementById('m-line')) document.getElementById('m-line').value = e.line_position || '';
   setResult(e.result || 'win');
 
   // Populate score sets
@@ -1656,11 +1701,20 @@ function entryCard(e) {
   const cls = isMatch ? (e.result === 'win' ? 'win' : 'loss') : 'practice';
   const badge = isMatch ? (e.result === 'win' ? 'W' : 'L') : 'P';
   const title = isMatch ? `vs ${e.opponent}` : (e.practice_type || 'Practice');
-  const meta = isMatch
-    ? `${formatDate(e._date)}${e.location ? ' · ' + e.location : ''}`
-    : `${formatDate(e._date)}${e.duration_minutes ? ' · ' + e.duration_minutes + ' min' : ''}`;
+  // Build context line: Division · Line · Date · Location
+  let metaParts = [];
+  if (isMatch) {
+    if (e.division) metaParts.push(e.division);
+    if (e.line_position) metaParts.push(e.line_position);
+    metaParts.push(formatDate(e._date));
+    if (e.location) metaParts.push(e.location);
+  } else {
+    metaParts.push(formatDate(e._date));
+    if (e.duration_minutes) metaParts.push(e.duration_minutes + ' min');
+  }
+  const meta = metaParts.join(' · ');
   const scoreStr = isMatch ? (formatScore(e) ? `<div class="entry-score">${formatScore(e)}</div>` : '') : '';
-  const areas = (isMatch ? e.focus_areas : e.focus_areas) || [];
+  const areas = e.focus_areas || [];
   const chips = areas.length
     ? `<div class="entry-chips">${areas.map(a => `<span class="entry-chip">${a}</span>`).join('')}</div>`
     : '';
