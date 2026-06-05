@@ -288,6 +288,29 @@ html, body { height: 100%; font-family: var(--font); background: var(--page); co
 .entry-chips { display: flex; flex-wrap: wrap; gap: 4px; margin-top: 5px; }
 .entry-chip { font-size: 10px; font-weight: 600; background: var(--page); color: var(--ink3); border-radius: 10px; padding: 2px 8px; border: 1px solid var(--border); }
 
+/* ── Insight cards ── */
+.insight-card { background: var(--surface); border-radius: var(--r); padding: 16px 18px; margin-bottom: 12px; box-shadow: var(--shadow); border: 1px solid var(--border); }
+.insight-label { font-size: 10px; font-weight: 700; letter-spacing: .7px; text-transform: uppercase; color: var(--ink3); margin-bottom: 6px; }
+.insight-value { font-size: 17px; font-weight: 800; color: var(--ink); line-height: 1.3; margin-bottom: 4px; }
+.insight-sub { font-size: 13px; color: var(--ink3); line-height: 1.5; }
+.insight-chips { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 10px; }
+.insight-chip { font-size: 12px; font-weight: 600; background: var(--season-bg1); color: #fff; border-radius: 20px; padding: 5px 12px; }
+.insight-chip.secondary { background: var(--page); color: var(--ink2); border: 1px solid var(--border); }
+.focus-rank-row { display: flex; align-items: center; justify-content: space-between; padding: 8px 0; border-bottom: 1px solid var(--border); }
+.focus-rank-row:last-child { border-bottom: none; }
+.focus-rank-name { font-size: 14px; font-weight: 600; color: var(--ink); }
+.focus-rank-count { font-size: 12px; font-weight: 700; color: var(--ink3); }
+.focus-rank-bar { height: 4px; background: var(--season-bg1); border-radius: 2px; margin-top: 4px; opacity: .7; }
+.resource-placeholder { background: var(--page); border-radius: var(--rsm); padding: 10px 13px; margin-top: 10px; font-size: 12px; color: var(--ink3); border: 1px dashed var(--border); }
+
+/* ── Home insight strip ── */
+.home-insight { background: var(--surface); border-radius: var(--r); padding: 13px 16px; margin-bottom: 12px; box-shadow: var(--shadow); border: 1px solid var(--border); display: flex; align-items: center; gap: 12px; }
+.home-insight-icon { width: 36px; height: 36px; border-radius: 10px; background: var(--season-bg1); display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
+.home-insight-icon svg { width: 18px; height: 18px; stroke: #fff; }
+.home-insight-body { flex: 1; min-width: 0; }
+.home-insight-label { font-size: 10px; font-weight: 700; letter-spacing: .6px; text-transform: uppercase; color: var(--ink3); margin-bottom: 2px; }
+.home-insight-value { font-size: 14px; font-weight: 700; color: var(--ink); }
+
 /* ── Toast ── */
 #toast { position: fixed; bottom: calc(env(safe-area-inset-bottom) + 80px); left: 50%; transform: translateX(-50%) translateY(10px); background: #1a1a1a; color: #fff; padding: 10px 20px; border-radius: 20px; font-size: 13px; font-weight: 600; opacity: 0; transition: all .25s; z-index: 999; white-space: nowrap; pointer-events: none; }
 #toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
@@ -412,6 +435,7 @@ html, body { height: 100%; font-family: var(--font); background: var(--page); co
         <div class="wstat"><div class="wstat-val" id="ws-streak">—</div><div class="wstat-lbl">Streak</div></div>
       </div>
     </div>
+    <div id="home-insights"></div>
     <div class="sl">Recent</div>
     <div id="home-recent"></div>
   </div>
@@ -436,11 +460,7 @@ html, body { height: 100%; font-family: var(--font); background: var(--page); co
   </div>
 
   <div class="page" id="page-improve">
-    <div class="coming-soon">
-      <div class="cs-icon">📚</div>
-      <div class="cs-title">Improve coming in v0.4</div>
-      <div class="cs-sub">Curated videos, drills, and reading based on your game.</div>
-    </div>
+    <div id="improve-content"></div>
   </div>
 
 
@@ -874,6 +894,7 @@ function goPage(p, btn) {
   document.getElementById('page-' + p).classList.add('on');
   btn.classList.add('on');
   window.scrollTo(0, 0);
+  if (p === 'improve') renderImprove();
 }
 
 // ── Profile sheet ─────────────────────────────────────────────────────────────
@@ -1321,6 +1342,184 @@ function editPractice(id) {
   window.scrollTo(0, 0);
 }
 
+// ── Improvement resource map (v0.6 will link to real content) ────────────────
+const IMPROVEMENT_RESOURCES = {
+  "First serve": [{ title: "Serve consistency drill", type: "Drill", description: "Hit 30 first serves: 10 wide, 10 body, 10 T. Track makes." }],
+  "Second serve": [{ title: "Kick serve drill", type: "Drill", description: "Practice 20 topspin second serves with heavy net clearance." }],
+  "Return": [{ title: "Return positioning", type: "Drill", description: "Stand 2 feet inside baseline. Focus on split-step timing." }],
+  "Forehand": [{ title: "Forehand depth drill", type: "Drill", description: "Aim 20 balls past the service line with controlled margin." }],
+  "Backhand": [{ title: "Backhand cross-court rally", type: "Drill", description: "Sustain 10-ball cross-court rallies with a partner." }],
+  "Volleys": [{ title: "Volley touch drill", type: "Drill", description: "At the net, alternate forehand and backhand volleys with control." }],
+  "Overheads": [{ title: "Overhead footwork", type: "Drill", description: "Practice drop-step and scissor kick technique on lobs." }],
+  "Court movement": [{ title: "Cone agility drill", type: "Drill", description: "Sprint to 4 cones in a diamond pattern, 10 reps." }],
+  "Footwork": [{ title: "Split-step timing", type: "Drill", description: "Practice split-step as opponent contacts ball on every rally." }],
+  "Net play": [{ title: "Approach and volley", type: "Drill", description: "Hit a deep approach, then move forward and finish with a volley." }],
+  "Mental focus": [{ title: "Between-point routine", type: "Mental", description: "Use a consistent 3-step routine: breathe, bounce, focus." }],
+  "Shot selection": [{ title: "High-percentage pattern", type: "Tactic", description: "Hit cross-court until an inside-out opportunity opens." }],
+  "Consistency": [{ title: "Rally consistency target", type: "Drill", description: "Aim for 20 controlled cross-court balls without error." }],
+  "Depth": [{ title: "Depth targeting drill", type: "Drill", description: "Place a cone 3 feet inside baseline. Hit 15 balls past it." }],
+  "Doubles positioning": [{ title: "Formation practice", type: "Tactic", description: "Practice I-formation and poach signals with your partner." }],
+};
+
+// ── Insight engine ────────────────────────────────────────────────────────────
+function computeInsights() {
+  const matches = allEntries.filter(e => e._kind === 'match');
+  const practices = allEntries.filter(e => e._kind === 'practice');
+  const now = new Date();
+  const d14 = new Date(now - 14 * 864e5).toISOString().slice(0, 10);
+  const d30 = new Date(now - 30 * 864e5).toISOString().slice(0, 10);
+
+  // Focus area frequency (last 30 days)
+  const focusCount = {};
+  [...matches, ...practices].filter(e => e._date >= d30).forEach(e => {
+    (e.focus_areas || []).forEach(f => { focusCount[f] = (focusCount[f] || 0) + 1; });
+  });
+  const focusRanked = Object.entries(focusCount).sort((a, b) => b[1] - a[1]);
+  const totalFocusSessions = [...matches, ...practices].filter(e => e._date >= d30 && (e.focus_areas||[]).length > 0).length;
+
+  // Last 5 matches
+  const last5 = matches.slice(0, 5);
+  const last5W = last5.filter(e => e.result === 'win').length;
+  const last5L = last5.length - last5W;
+
+  // 14-day balance
+  const recentM = matches.filter(e => e._date >= d14).length;
+  const recentP = practices.filter(e => e._date >= d14).length;
+
+  return { focusRanked, focusCount, totalFocusSessions, last5, last5W, last5L, recentM, recentP, matches, practices };
+}
+
+// ── Render improve page ───────────────────────────────────────────────────────
+function renderImprove() {
+  const el = document.getElementById('improve-content');
+  if (!el) return;
+  const { focusRanked, focusCount, totalFocusSessions, last5, last5W, last5L, recentM, recentP, matches } = computeInsights();
+  const hasData = matches.length > 0;
+  const hasFocus = focusRanked.length > 0;
+
+  if (!hasData) {
+    el.innerHTML = `
+      <div class="insight-card">
+        <div class="insight-label">Getting started</div>
+        <div class="insight-value">Your improvement profile builds as you play.</div>
+        <div class="insight-sub" style="margin-top:6px;">Log a match and a practice to unlock your first insights.</div>
+      </div>`;
+    return;
+  }
+
+  let html = '';
+
+  // A. Most common focus area
+  if (hasFocus) {
+    const [topArea, topCount] = focusRanked[0];
+    const resource = IMPROVEMENT_RESOURCES[topArea];
+    html += `<div class="insight-card">
+      <div class="insight-label">Most common focus area</div>
+      <div class="insight-value">${topArea}</div>
+      <div class="insight-sub">${topArea} appeared in ${topCount} of your last ${totalFocusSessions} session${totalFocusSessions !== 1 ? 's' : ''}.</div>
+      ${resource ? `<div class="resource-placeholder">Resources coming next: drills and practice plans for ${topArea}.</div>` : ''}
+    </div>`;
+  } else {
+    html += `<div class="insight-card">
+      <div class="insight-label">Most common focus area</div>
+      <div class="insight-sub">Add focus areas to your logs to see trends here.</div>
+    </div>`;
+  }
+
+  // B. Recent match trend
+  if (last5.length > 0) {
+    const trend = last5W > last5L ? 'Positive form' : last5W === last5L ? 'Even form' : 'Tough stretch';
+    html += `<div class="insight-card">
+      <div class="insight-label">Recent form</div>
+      <div class="insight-value">W-L: ${last5W}–${last5L}</div>
+      <div class="insight-sub">${trend} over your last ${last5.length} match${last5.length !== 1 ? 'es' : ''}.</div>
+    </div>`;
+  }
+
+  // C. Match / practice balance
+  html += `<div class="insight-card">
+    <div class="insight-label">Match / practice balance (last 14 days)</div>
+    <div class="insight-value">${recentM} match${recentM !== 1 ? 'es' : ''}, ${recentP} practice${recentP !== 1 ? 's' : ''}</div>
+    <div class="insight-sub">${
+      recentM === 0 && recentP === 0 ? 'No activity in the last 14 days. Time to get back on court.'
+      : recentP === 0 ? 'No practices logged. Add a focused session before your next match.'
+      : recentM > recentP * 2 ? 'You\'re match-heavy. Add one focused practice to sharpen your game.'
+      : recentP > recentM * 2 ? 'Good practice volume. Match play will help you test your game.'
+      : 'Good balance: your practice volume is supporting match play.'
+    }</div>
+  </div>`;
+
+  // D. Suggested next focus
+  if (focusRanked.length > 0) {
+    const top3 = focusRanked.slice(0, 3).map(([f]) => f);
+    html += `<div class="insight-card">
+      <div class="insight-label">Suggested next focus</div>
+      <div class="insight-sub" style="margin-bottom:8px;">Based on your most-logged areas:</div>
+      <div class="insight-chips">${top3.map(f => `<span class="insight-chip">${f}</span>`).join('')}</div>
+      <div class="resource-placeholder" style="margin-top:10px;">Resources coming next: drills and practice plans for these focus areas.</div>
+    </div>`;
+  }
+
+  // E. Focus area ranking
+  if (focusRanked.length > 0) {
+    const maxCount = focusRanked[0][1];
+    const top8 = focusRanked.slice(0, 8);
+    html += `<div class="insight-card">
+      <div class="insight-label">Focus areas ranked</div>
+      ${top8.map(([area, count]) => `
+        <div class="focus-rank-row">
+          <div>
+            <div class="focus-rank-name">${area}</div>
+            <div class="focus-rank-bar" style="width:${Math.round(count/maxCount*100)}%;max-width:160px;"></div>
+          </div>
+          <div class="focus-rank-count">${count} session${count !== 1 ? 's' : ''}</div>
+        </div>`).join('')}
+    </div>`;
+  }
+
+  el.innerHTML = html;
+}
+
+// ── Render home insights strip ────────────────────────────────────────────────
+function renderHomeInsights() {
+  const el = document.getElementById('home-insights');
+  if (!el) return;
+  const { focusRanked, last5, last5W, last5L, matches } = computeInsights();
+  if (matches.length === 0) { el.innerHTML = ''; return; }
+
+  let html = '';
+
+  // W-L record
+  if (last5.length > 0) {
+    html += `<div class="home-insight">
+      <div class="home-insight-icon">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>
+      </div>
+      <div class="home-insight-body">
+        <div class="home-insight-label">Recent form</div>
+        <div class="home-insight-value">W-L: ${last5W}–${last5L} in last ${last5.length} matches</div>
+      </div>
+    </div>`;
+  }
+
+  // Top focus area
+  if (focusRanked.length > 0) {
+    const top = focusRanked[0][0];
+    const count = focusRanked[0][1];
+    html += `<div class="home-insight">
+      <div class="home-insight-icon">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="16"/><line x1="8" y1="12" x2="16" y2="12"/></svg>
+      </div>
+      <div class="home-insight-body">
+        <div class="home-insight-label">Top focus area</div>
+        <div class="home-insight-value">${top} · ${count} session${count !== 1 ? 's' : ''}</div>
+      </div>
+    </div>`;
+  }
+
+  el.innerHTML = html;
+}
+
 // ── Load entries ───────────────────────────────────────────────────────────────
 async function loadEntries() {
   if (!session?.user?.id) return;
@@ -1366,6 +1565,8 @@ function renderHome() {
   document.getElementById('home-recent').innerHTML = recent.length
     ? recent.map(entryCard).join('')
     : '<div class="empty-state">Nothing logged yet.<br>Tap <strong>＋ LOG</strong> to record your first match.</div>';
+  renderHomeInsights();
+  renderImprove();
 }
 
 function entryCard(e) {
