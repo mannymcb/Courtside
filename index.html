@@ -321,6 +321,29 @@ html, body { height: 100%; font-family: var(--font); background: var(--page); co
 .home-insight-label { font-size: 10px; font-weight: 700; letter-spacing: .6px; text-transform: uppercase; color: var(--ink3); margin-bottom: 2px; }
 .home-insight-value { font-size: 14px; font-weight: 700; color: var(--ink); }
 
+/* ── Log prompt ── */
+.log-prompt { background: var(--surface); border-radius: var(--r); padding: 16px 18px; margin-bottom: 12px; box-shadow: var(--shadow); border: 1px solid var(--border); }
+.log-prompt-label { font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: .6px; color: var(--ink3); margin-bottom: 10px; }
+.log-prompt-btns { display: flex; gap: 8px; }
+.log-prompt-btn { flex: 1; padding: 13px 8px; border-radius: var(--rsm); border: 1.5px solid var(--border); background: var(--page); font-family: var(--font); font-size: 14px; font-weight: 700; cursor: pointer; color: var(--ink2); display: flex; flex-direction: column; align-items: center; gap: 4px; transition: all .12s; }
+.log-prompt-btn:active { background: var(--season-bg1); color: #fff; border-color: var(--season-bg1); }
+.log-prompt-btn svg { width: 20px; height: 20px; }
+.log-prompt-btn.primary { background: var(--season-bg1); color: #fff; border-color: var(--season-bg1); }
+
+/* ── Success overlay ── */
+.success-overlay { position: fixed; bottom: 90px; left: 50%; transform: translateX(-50%) translateY(20px); background: #1a1a1a; color: #fff; border-radius: var(--r); padding: 14px 20px; font-size: 14px; font-weight: 600; opacity: 0; transition: all .3s; z-index: 998; min-width: 240px; max-width: 320px; text-align: center; pointer-events: none; box-shadow: 0 4px 20px rgba(0,0,0,.25); }
+.success-overlay.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+.success-overlay .success-icon { font-size: 20px; margin-bottom: 4px; }
+.success-overlay .success-msg { font-size: 13px; color: rgba(255,255,255,.8); margin-top: 3px; }
+
+/* ── Collapsible entry cards ── */
+.entry-card { cursor: pointer; }
+.entry-card-expanded { display: none; margin-top: 10px; padding-top: 10px; border-top: 1px solid var(--border); }
+.entry-card.open .entry-card-expanded { display: block; }
+.entry-detail-row { font-size: 12px; color: var(--ink3); margin-bottom: 4px; }
+.entry-detail-row strong { color: var(--ink2); }
+.entry-expand-hint { font-size: 11px; color: var(--ink4); margin-top: 4px; }
+
 /* ── Toast ── */
 #toast { position: fixed; bottom: calc(env(safe-area-inset-bottom) + 80px); left: 50%; transform: translateX(-50%) translateY(10px); background: #1a1a1a; color: #fff; padding: 10px 20px; border-radius: 20px; font-size: 13px; font-weight: 600; opacity: 0; transition: all .25s; z-index: 999; white-space: nowrap; pointer-events: none; }
 #toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
@@ -424,18 +447,33 @@ html, body { height: 100%; font-family: var(--font); background: var(--page); co
       <div class="nb-plus-circle">＋</div>
       <div class="nb-plus-label">LOG</div>
     </button>
-    <button class="nb" id="nb-club" onclick="goPage('club',this)">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 00-3-3.87"/><path d="M16 3.13a4 4 0 010 7.75"/></svg>
-      Club
-    </button>
     <button class="nb" id="nb-improve" onclick="goPage('improve',this)">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M2 3h6a4 4 0 014 4v14a3 3 0 00-3-3H2z"/><path d="M22 3h-6a4 4 0 00-4 4v14a3 3 0 013-3h7z"/></svg>
       Improve
+    </button>
+    <button class="nb" id="nb-profile" onclick="openProfile()">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="8" r="4"/><path d="M4 20c0-4 3.6-7 8-7s8 3 8 7"/></svg>
+      Profile
     </button>
   </nav>
 
   <!-- PAGES -->
   <div class="page on" id="page-home">
+    <!-- Log prompt -->
+    <div class="log-prompt">
+      <div class="log-prompt-label">What did you do today?</div>
+      <div class="log-prompt-btns">
+        <button class="log-prompt-btn primary" onclick="goLogMatch()">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M 3 9 C 7 13 7 11 3 15"/><path d="M 21 9 C 17 13 17 11 21 15"/><path d="M 9 3 C 12 7 12 7 15 3"/><path d="M 9 21 C 12 17 12 17 15 21"/></svg>
+          Match play
+        </button>
+        <button class="log-prompt-btn" onclick="goLogPractice()">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>
+          Practice
+        </button>
+      </div>
+    </div>
+    <!-- Week stats -->
     <div class="card" id="home-stats-card">
       <div class="card-title">This week</div>
       <div class="week-grid" id="week-grid">
@@ -446,7 +484,10 @@ html, body { height: 100%; font-family: var(--font); background: var(--page); co
       </div>
     </div>
     <div id="home-insights"></div>
-    <div class="sl">Recent</div>
+    <div style="display:flex;align-items:center;justify-content:space-between;margin:14px 0 8px;">
+      <div class="sl" style="margin:0;">Recent</div>
+      <button onclick="goPage('activity',document.getElementById('nb-activity'))" style="font-size:12px;font-weight:600;color:var(--season-bg1);background:none;border:none;cursor:pointer;font-family:var(--font);">View all →</button>
+    </div>
     <div id="home-recent"></div>
   </div>
 
@@ -455,19 +496,11 @@ html, body { height: 100%; font-family: var(--font); background: var(--page); co
       <button class="chip on" onclick="setFilter('all',this)">All</button>
       <button class="chip" onclick="setFilter('match',this)">Matches</button>
       <button class="chip" onclick="setFilter('practice',this)">Practice</button>
-      <button class="chip" onclick="setFilter('win',this)">Wins</button>
-      <button class="chip" onclick="setFilter('loss',this)">Losses</button>
     </div>
     <div id="activity-list"><div class="empty-state" style="padding:32px 16px;"><div style="font-size:15px;font-weight:700;color:var(--ink);margin-bottom:6px;">No activity yet</div><div style="font-size:13px;color:var(--ink3);line-height:1.6;">Log a match or practice to track your progress over time.</div></div></div>
   </div>
 
-  <div class="page" id="page-club">
-    <div class="coming-soon">
-      <div class="cs-icon">🏟️</div>
-      <div class="cs-title" id="club-page-title">Club coming soon</div>
-      <div class="cs-sub">Connect with members at your club, share results, and form teams.</div>
-    </div>
-  </div>
+
 
   <div class="page" id="page-improve">
     <div id="improve-content"></div>
@@ -635,6 +668,11 @@ html, body { height: 100%; font-family: var(--font); background: var(--page); co
 
   </div><!-- /app-shell -->
   <div id="toast"></div>
+  <div class="success-overlay" id="success-overlay">
+    <div class="success-icon" id="success-icon"></div>
+    <div id="success-title" style="font-size:15px;font-weight:700;"></div>
+    <div class="success-msg" id="success-msg"></div>
+  </div>
 </div>
 
 <script>
@@ -917,8 +955,7 @@ function updateHero() {
   if (username) parts.push('@' + username);
   if (club) parts.push(club);
   document.getElementById('hero-sub').textContent = parts.join(' · ');
-  const clubTitle = document.getElementById('club-page-title');
-  if (clubTitle) clubTitle.textContent = (club || 'Club') + ' — coming in v0.4';
+
 }
 
 function goPage(p, btn) {
@@ -1003,13 +1040,8 @@ function openProfile() {
       </div>
       <div id="ep-err" style="color:#e74c3c;font-size:13px;margin-bottom:8px;display:none;"></div>
       <button class="save-btn" id="ep-save" onclick="saveProfileEdits()">Save changes</button>
-      <div style="display:flex;align-items:center;justify-content:space-between;padding:14px 0;border-top:1px solid var(--border);margin-top:10px;">
-        <div>
-          <div style="font-size:13px;font-weight:600;color:var(--ink);">Sound effects</div>
-          <div style="font-size:11px;color:var(--ink3);margin-top:1px;" id="sound-status-label">Off</div>
-        </div>
-        <button id="sound-toggle-btn" onclick="toggleSound()" style="width:44px;height:26px;border-radius:13px;border:none;cursor:pointer;font-size:0;position:relative;transition:background .2s;"></button>
-      </div>
+
+      <div style="font-size:11px;color:var(--ink3);text-align:center;padding:12px 0 4px;line-height:1.6;">Private beta · <a href="mailto:manny.mcb@gmail.com?subject=Courtside feedback" style="color:var(--season-bg1);font-weight:600;text-decoration:none;">Send feedback</a></div>
       <button class="signout-btn" onclick="signOut()">Sign out</button>
     </div>
   `;
@@ -1317,8 +1349,7 @@ async function saveMatch() {
     }
     resetMatchForm();
     await loadAppData();
-    if (!editingMatchId) playTennisPopSound();
-    showToast(editingMatchId ? 'Match updated ✓' : 'Match saved! 🎾');
+    showMatchSuccess(matchResult, !!editingMatchId);
     goPage('home', document.getElementById('nb-home'));
   } catch(err) {
     console.error('[Courtside] match save error:', err.message);
@@ -1377,7 +1408,7 @@ async function savePractice() {
     }
     resetPracticeForm();
     await loadAppData();
-    showToast(editingPracticeId ? 'Practice updated ✓' : 'Practice logged! 💪');
+    showPracticeSuccess(!!editingPracticeId);
     goPage('home', document.getElementById('nb-home'));
   } catch(err) {
     console.error('[Courtside] practice save error:', err.message);
@@ -1413,7 +1444,7 @@ async function loadAppData() {
     console.log('[Courtside] loadAppData complete');
   } catch(err) {
     console.error('[Courtside] loadAppData error:', err.message);
-    if (homeRecent) homeRecent.innerHTML = `<div class="empty-state" style="color:#e74c3c;">Could not load activity: ${err.message}</div>`;
+    if (homeRecent) homeRecent.innerHTML = `<div class="empty-state" style="padding:24px 16px;"><div style="color:#e74c3c;margin-bottom:12px;font-size:13px;">Could not load activity.</div><button onclick="loadAppData()" style="background:var(--season-bg1);color:#fff;border:none;border-radius:var(--r);padding:10px 20px;font-family:var(--font);font-size:13px;font-weight:600;cursor:pointer;">↻ Retry</button></div>`;
   }
 }
 
@@ -1725,6 +1756,7 @@ function renderImprove() {
     </div>`;
   }
 
+  html += `<div style="text-align:center;padding:20px 4px 8px;border-top:1px solid var(--border);margin-top:8px;"><div style="font-size:12px;color:var(--ink3);">Testing Courtside? <a href="mailto:manny.mcb@gmail.com?subject=Courtside feedback" style="color:var(--season-bg1);font-weight:600;text-decoration:none;">Send feedback →</a></div></div>`;
   el.innerHTML = html;
   console.log('[Courtside] renderImprove — done');
 }
@@ -1815,53 +1847,83 @@ function renderHome() {
   const winsLbl = document.querySelector('#ws-wins')?.closest('.wstat')?.querySelector('.wstat-lbl');
   if (winsLbl) winsLbl.textContent = weekMatches.length ? 'W–L' : 'Wins';
   // Recent
-  const recent = allEntries.slice(0, 5);
+  const recent = allEntries.slice(0, 3);
   document.getElementById('home-recent').innerHTML = recent.length
     ? recent.map(entryCard).join('')
-    : '<div class="empty-state" style="padding:32px 16px;"><div style="font-size:36px;margin-bottom:12px;">🎾</div><div style="font-size:15px;font-weight:700;color:var(--ink);margin-bottom:6px;">Log your first match</div><div style="font-size:13px;color:var(--ink3);line-height:1.6;margin-bottom:18px;">Track results, score, and what you worked on to start building your tennis profile.</div><button onclick="goLog()" style="background:var(--season-bg1);color:#fff;border:none;border-radius:var(--r);padding:12px 24px;font-family:var(--font);font-size:14px;font-weight:700;cursor:pointer;">Log a match</button></div>';
+    : `<div style="padding:4px 0 16px;">
+        <div class="insight-card">
+          <div class="insight-label">Welcome to Courtside</div>
+          <div class="insight-value" style="font-size:16px;margin-bottom:12px;">Here's how to get started</div>
+          <div style="display:flex;flex-direction:column;gap:10px;margin-bottom:16px;">
+            <div style="display:flex;align-items:center;gap:10px;"><div style="width:22px;height:22px;border-radius:50%;background:var(--season-bg1);color:#fff;font-size:10px;font-weight:800;display:flex;align-items:center;justify-content:center;flex-shrink:0;">1</div><div style="font-size:13px;color:var(--ink2);">Tap <strong>Profile</strong> to complete your profile</div></div>
+            <div style="display:flex;align-items:center;gap:10px;"><div style="width:22px;height:22px;border-radius:50%;background:var(--season-bg1);color:#fff;font-size:10px;font-weight:800;display:flex;align-items:center;justify-content:center;flex-shrink:0;">2</div><div style="font-size:13px;color:var(--ink2);">Tap <strong>＋ LOG</strong> to record your first match</div></div>
+            <div style="display:flex;align-items:center;gap:10px;"><div style="width:22px;height:22px;border-radius:50%;background:var(--season-bg1);color:#fff;font-size:10px;font-weight:800;display:flex;align-items:center;justify-content:center;flex-shrink:0;">3</div><div style="font-size:13px;color:var(--ink2);">Log a practice and select focus areas</div></div>
+            <div style="display:flex;align-items:center;gap:10px;"><div style="width:22px;height:22px;border-radius:50%;background:var(--season-bg1);color:#fff;font-size:10px;font-weight:800;display:flex;align-items:center;justify-content:center;flex-shrink:0;">4</div><div style="font-size:13px;color:var(--ink2);">Visit <strong>Improve</strong> for drills and insights</div></div>
+          </div>
+          <button onclick="goLog()" style="width:100%;background:var(--season-bg1);color:#fff;border:none;border-radius:var(--r);padding:13px;font-family:var(--font);font-size:14px;font-weight:700;cursor:pointer;">Log your first match →</button>
+        </div>
+      </div>` ;
   renderHomeInsights();
   renderImprove();
 }
 
-function entryCard(e) {
+function entryCard(e, compact = false) {
   const isMatch = e._kind === 'match';
   const cls = isMatch ? (e.result === 'win' ? 'win' : 'loss') : 'practice';
   const badge = isMatch ? (e.result === 'win' ? 'W' : 'L') : 'P';
-  const title = isMatch ? `vs ${e.opponent}` : practiceTypeLabel(e.practice_type);
-  // Build context line: Division · Line · Date · Location
-  let metaParts = [];
-  if (isMatch) {
-    if (e.division) metaParts.push(e.division);
-    if (e.line_position) metaParts.push(e.line_position);
-    metaParts.push(formatDate(e._date));
-    if (e.location) metaParts.push(e.location);
-  } else {
-    metaParts.push(formatDate(e._date));
-    if (e.duration_minutes) metaParts.push(e.duration_minutes + ' min');
-  }
-  const meta = metaParts.join(' · ');
-  const scoreStr = isMatch ? (formatScore(e) ? `<div class="entry-score">${formatScore(e)}</div>` : '') : '';
+  const editFn = isMatch ? `event.stopPropagation();editMatch('${e.id}')` : `event.stopPropagation();editPractice('${e.id}')`;
+
+  // ── Collapsed view ─────────────────────────────────────────────────────
   const areas = e.focus_areas || [];
-  // Build sub-line: partner + focus areas
-  const partnerLine = isMatch && e.partner ? `<div class="entry-meta" style="margin-top:2px;">Partner: ${e.partner}</div>` : '';
-  const chips = areas.length
-    ? `<div class="entry-chips">${areas.map(a => `<span class="entry-chip">${a}</span>`).join('')}</div>`
+  const topChips = areas.slice(0, 3);
+  const chips = topChips.length
+    ? `<div class="entry-chips">${topChips.map(a => `<span class="entry-chip">${a}</span>`).join('')}</div>`
     : '';
-  const editFn = isMatch ? `editMatch('${e.id}')` : `editPractice('${e.id}')`;
-  return `<div class="entry-card ${cls}">
+
+  let collapsedMeta = [];
+  if (isMatch) {
+    if (e.division) collapsedMeta.push(e.division);
+    if (e.line_position) collapsedMeta.push(e.line_position);
+  } else {
+    if (e.practice_type) collapsedMeta.push(practiceTypeLabel(e.practice_type));
+    if (e.duration_minutes) collapsedMeta.push(e.duration_minutes + ' min');
+  }
+  const scoreStr = isMatch && formatScore(e) ? `<div class="entry-score">${formatScore(e)}</div>` : '';
+
+  // ── Expanded view ─────────────────────────────────────────────────────
+  let expandedRows = [];
+  if (isMatch) {
+    if (e.opponent) expandedRows.push(`<div class="entry-detail-row"><strong>vs</strong> ${e.opponent}${e.opponent_club ? ' · ' + e.opponent_club : ''}</div>`);
+    if (e.partner) expandedRows.push(`<div class="entry-detail-row"><strong>Partner:</strong> ${e.partner}</div>`);
+    if (e.location) expandedRows.push(`<div class="entry-detail-row"><strong>Location:</strong> ${e.location}</div>`);
+    expandedRows.push(`<div class="entry-detail-row">${formatDate(e._date)}</div>`);
+    if (e.worked_well) expandedRows.push(`<div class="entry-detail-row"><strong>Worked well:</strong> ${e.worked_well}</div>`);
+    if (e.needs_work) expandedRows.push(`<div class="entry-detail-row"><strong>Work on:</strong> ${e.needs_work}</div>`);
+    if (e.notes) expandedRows.push(`<div class="entry-detail-row"><strong>Notes:</strong> ${e.notes}</div>`);
+  } else {
+    expandedRows.push(`<div class="entry-detail-row">${formatDate(e._date)}</div>`);
+    if (e.notes) expandedRows.push(`<div class="entry-detail-row"><strong>Notes:</strong> ${e.notes}</div>`);
+    if (e.next_goal) expandedRows.push(`<div class="entry-detail-row"><strong>Next goal:</strong> ${e.next_goal}</div>`);
+  }
+  expandedRows.push(`<button onclick="${editFn}" style="font-size:12px;font-weight:600;color:var(--season-bg1);background:none;border:none;cursor:pointer;padding:6px 0 0;font-family:var(--font);">Edit →</button>`);
+
+  const expanded = `<div class="entry-card-expanded">${expandedRows.join('')}</div>`;
+
+  return `<div class="entry-card ${cls}" onclick="toggleCard(this)">
     <div class="entry-badge ${cls}">${badge}</div>
     <div style="flex:1;min-width:0;">
-      <div class="entry-opp">${title}</div>
-      ${isMatch && e.opponent_club ? `<div class="entry-meta" style="margin-top:1px;font-weight:500;color:var(--ink2);">${e.opponent_club}</div>` : ''}
-      <div class="entry-meta">${meta}</div>
-      ${partnerLine}
+      <div style="display:flex;align-items:center;gap:6px;flex-wrap:wrap;">
+        ${collapsedMeta.map(m => `<span style="font-size:12px;font-weight:600;color:var(--ink2);">${m}</span>`).join('<span style="color:var(--ink4);font-size:11px;">·</span>')}
+      </div>
       ${chips}
+      ${expanded}
     </div>
-    <div style="display:flex;flex-direction:column;align-items:flex-end;gap:4px;flex-shrink:0;">
-      ${scoreStr}
-      <button onclick="${editFn}" style="font-size:11px;font-weight:600;color:var(--ink3);background:none;border:none;cursor:pointer;padding:2px 0;font-family:var(--font);">Edit</button>
-    </div>
+    ${scoreStr}
   </div>`;
+}
+
+function toggleCard(el) {
+  el.classList.toggle('open');
 }
 
 function formatDate(d) {
@@ -1926,6 +1988,30 @@ function renderActivity() {
   document.getElementById('activity-list').innerHTML = filtered.length
     ? filtered.map(entryCard).join('')
     : '<div class="empty-state">No entries match this filter.</div>';
+}
+
+// ── Success overlay ────────────────────────────────────────────────────────────
+let successTimer;
+function showSuccess(icon, title, msg) {
+  const el = document.getElementById('success-overlay');
+  document.getElementById('success-icon').textContent = icon;
+  document.getElementById('success-title').textContent = title;
+  document.getElementById('success-msg').textContent = msg;
+  el.classList.add('show');
+  clearTimeout(successTimer);
+  successTimer = setTimeout(() => el.classList.remove('show'), 2800);
+}
+function showMatchSuccess(result, isEdit) {
+  if (isEdit) { showToast('Match updated ✓'); return; }
+  if (result === 'win') {
+    showSuccess('✓', 'Nice win.', 'Keep building.');
+  } else {
+    showSuccess('✓', 'Logged.', 'Learn from it and reset.');
+  }
+}
+function showPracticeSuccess(isEdit) {
+  if (isEdit) { showToast('Practice updated ✓'); return; }
+  showSuccess('✓', 'Practice banked.', "That's how you improve.");
 }
 
 // ── Toast ──────────────────────────────────────────────────────────────────────
