@@ -1192,8 +1192,8 @@ function updateLineOptions(type) {
   const isDoubles = ['doubles','mixed'].includes(type);
   const current = sel.value;
   const opts = isDoubles
-    ? ['', 'Doubles 1', 'Doubles 2', 'Doubles 3', 'Other']
-    : ['', 'Singles 1', 'Singles 2', 'Singles 3', 'Other'];
+    ? ['', 'Doubles 1', 'Doubles 2', 'Doubles 3']
+    : ['', 'Singles 1', 'Singles 2'];
   sel.innerHTML = opts.map(o => `<option value="${o}">${o || '—'}</option>`).join('');
   // Restore selection if still valid
   if (opts.includes(current)) sel.value = current;
