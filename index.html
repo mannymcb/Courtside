@@ -503,22 +503,12 @@ html, body { height: 100%; font-family: var(--font); background: var(--page); co
 
   <!-- LOG PAGE -->
   <div class="page" id="page-log">
-    <div class="log-prompt" style="margin-bottom:14px;">
-      <div class="log-prompt-label">What did you do today?</div>
-      <div class="log-prompt-btns">
-        <button class="log-prompt-btn primary" id="lp-match" onclick="goLogMatch()">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M3 9c4 4 4 2 0 6"/><path d="M21 9c-4 4-4 2 0 6"/><path d="M9 3c3 4 3 4 6 0"/><path d="M9 21c3-4 3-4 6 0"/></svg>
-          Match play
-        </button>
-        <button class="log-prompt-btn" id="lp-practice" onclick="goLogPractice()">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>
-          Practice
-        </button>
+    <div style="margin-bottom:12px;">
+      <div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.6px;color:var(--ink3);margin-bottom:8px;">What did you do today?</div>
+      <div class="type-tabs" id="log-type-tabs">
+        <button class="ttab on" id="tt-match" onclick="goLogMatch()">🎾 Match play</button>
+        <button class="ttab" id="tt-practice" onclick="goLogPractice()">🏃 Practice</button>
       </div>
-    </div>
-    <div class="type-tabs" style="display:none;" id="log-type-tabs">
-      <button class="ttab on" id="tt-match" onclick="setLogType('match')">🎾 Match</button>
-      <button class="ttab" id="tt-practice" onclick="setLogType('practice')">🏃 Practice</button>
     </div>
 
     <!-- MATCH FORM -->
@@ -1229,6 +1219,7 @@ function setLogType(t) {
   document.getElementById('tt-practice').classList.toggle('on', t === 'practice');
   document.getElementById('log-match').style.display = t === 'match' ? 'block' : 'none';
   document.getElementById('log-practice').style.display = t === 'practice' ? 'block' : 'none';
+  window.scrollTo(0, 0);
 }
 
 function setResult(r) {
@@ -1384,11 +1375,7 @@ function resetMatchForm() {
   if (header) header.textContent = 'Log match';
   const cancelBtn = document.getElementById('m-cancel-btn');
   if (cancelBtn) cancelBtn.style.display = 'none';
-  // Restore prompt on cancel
-  const prompt = document.querySelector('#page-log .log-prompt');
-  const tabs = document.getElementById('log-type-tabs');
-  if (prompt) prompt.style.display = '';
-  if (tabs) tabs.style.display = 'none';
+
   setResult('win');
   mFocusSelected = new Set();
   resetScoreInputs();
@@ -1442,11 +1429,7 @@ function resetPracticeForm() {
   if (header) header.textContent = 'Log practice';
   const cancelBtn = document.getElementById('p-cancel-btn');
   if (cancelBtn) cancelBtn.style.display = 'none';
-  // Restore prompt on cancel
-  const prompt = document.querySelector('#page-log .log-prompt');
-  const tabs = document.getElementById('log-type-tabs');
-  if (prompt) prompt.style.display = '';
-  if (tabs) tabs.style.display = 'none';
+
   pFocusSelected = new Set();
   renderFocusChips('p-focus-chips', pFocusSelected);
 }
