@@ -1498,79 +1498,79 @@ function editPractice(id) {
 // ── Improvement resource map (v0.6 will link to real content) ────────────────
 const IMPROVEMENT_RESOURCES = {
   "First serve": [
-    { title: "Zone serve drill", type: "Drill", duration: "10 min", description: "Hit 10 serves wide, 10 to the body, 10 up the T. Track how many land in. Focus on one zone at a time.", cue: "Let the toss set the direction.", links: [] },
+    { title: "Zone serve drill", type: "Drill", duration: "10 min", description: "Hit 10 serves wide, 10 to the body, 10 up the T. Track how many land in. Focus on one zone at a time.", cue: "Let the toss set the direction.", links: [{label:"USTA serve placement",type:"Official guide",url:"https://www.usta.com/en/home/improve/tips-and-instruction/national/tennis-techniques--service-placement.html"},{label:"Popular serve lesson",type:"Video",url:"https://www.youtube.com/watch?v=YqgcykDGB2A"}] },
     { title: "Toss placement check", type: "Cue", duration: "5 min", description: "Toss to the same spot 10 times without swinging. The ball should land just inside your front foot.", cue: "Toss up, not forward.", links: [] }
   ],
   "Second serve": [
-    { title: "Spin serve target", type: "Drill", duration: "10 min", description: "Hit 20 second serves with heavy topspin. Aim for the center of the service box. Prioritize clearance over speed.", cue: "Brush up the back of the ball." , links: []},
+    { title: "Spin serve target", type: "Drill", duration: "10 min", description: "Hit 20 second serves with heavy topspin. Aim for the center of the service box. Prioritize clearance over speed.", cue: "Brush up the back of the ball." , links: [{label:"USTA serve placement",type:"Official guide",url:"https://www.usta.com/en/home/improve/tips-and-instruction/national/tennis-techniques--service-placement.html"},{label:"USTA serving rules",type:"Official guide",url:"https://www.usta.com/en/home/improve/tips-and-instruction/national/tennis-serving-rules.html"}]},
     { title: "Kick serve rally", type: "Drill", duration: "15 min", description: "Serve and play out the point. Treat each second serve as a full rally start, not a defensive shot.", cue: "Aggressive margin, not just safe." , links: []}
   ],
   "Return": [
-    { title: "Split-step return drill", type: "Drill", duration: "10 min", description: "Have a partner serve. Focus only on split-stepping as the ball is tossed. Block or chip the return — no winners.", cue: "Split as the server tosses." , links: []},
+    { title: "Split-step return drill", type: "Drill", duration: "10 min", description: "Have a partner serve. Focus only on split-stepping as the ball is tossed. Block or chip the return — no winners.", cue: "Split as the server tosses." , links: [{label:"USTA return of serve",type:"Official guide",url:"https://www.usta.com/en/home/improve/tips-and-instruction/national/return-of-serve.html"},{label:"USTA serve returns",type:"Official guide",url:"https://www.usta.com/en/home/improve/tips-and-instruction/national/tennis-strategy--returning-first-and-second-serves.html"}]},
     { title: "Short backswing cue", type: "Cue", duration: "5 min", description: "On fast serves, compact your backswing to half its normal size. Use the server's pace instead of creating your own.", cue: "Turn early, short swing." , links: []}
   ],
   "Forehand": [
-    { title: "Depth target drill", type: "Drill", duration: "15 min", description: "Place a cone 3 feet inside the baseline. Rally crosscourt, aiming every ball past the cone. Count consecutive hits.", cue: "Drive through, not at the ball." , links: []},
+    { title: "Depth target drill", type: "Drill", duration: "15 min", description: "Place a cone 3 feet inside the baseline. Rally crosscourt, aiming every ball past the cone. Count consecutive hits.", cue: "Drive through, not at the ball." , links: [{label:"USTA forehand basics",type:"Official guide",url:"https://www.usta.com/en/home/improve/tips-and-instruction/national/learning-the-basics--forehand.html"},{label:"Popular forehand video",type:"Video",url:"https://www.youtube.com/watch?v=8V_KWh1Uoeo"}]},
     { title: "Recovery reset", type: "Cue", duration: "5 min", description: "After every forehand, take one recovery step back toward the center. Drill this as a habit, not just when stretched.", cue: "Hit and recover together." , links: []}
   ],
   "Backhand": [
-    { title: "Crosscourt consistency", type: "Drill", duration: "15 min", description: "Rally backhand crosscourt with a partner. Aim for 15 consecutive balls past the service line without error.", cue: "Contact in front, finish high." , links: []},
+    { title: "Crosscourt consistency", type: "Drill", duration: "15 min", description: "Rally backhand crosscourt with a partner. Aim for 15 consecutive balls past the service line without error.", cue: "Contact in front, finish high." , links: [{label:"USTA backhand basics",type:"Official guide",url:"https://www.usta.com/en/home/improve/tips-and-instruction/national/learning-the-basics--backhand.html"},{label:"USTA two-handed backhand",type:"Official guide",url:"https://www.usta.com/en/home/improve/tips-and-instruction/national/improve-your-tennis-game--the-driving-force-in-your-two-handed-b.html"}]},
     { title: "Contact point cue", type: "Cue", duration: "5 min", description: "Shadow swing 10 times focusing on contact point. For two-handed: both arms through the ball. For one-handed: shoulder turn is everything.", cue: "Turn shoulder, lead with elbow." , links: []}
   ],
   "Volleys": [
-    { title: "First volley target", type: "Drill", duration: "10 min", description: "Feed balls to your partner at the service line. They hit deep to your feet. Practice blocking the first volley deep crosscourt.", cue: "Short backswing, punch through." , links: []},
+    { title: "First volley target", type: "Drill", duration: "10 min", description: "Feed balls to your partner at the service line. They hit deep to your feet. Practice blocking the first volley deep crosscourt.", cue: "Short backswing, punch through." , links: [{label:"USTA offense at net",type:"Official guide",url:"https://www.usta.com/en/home/improve/tips-and-instruction/national/improve-your-tennis-game--offense-at-the-net.html"},{label:"USTA volley video",type:"Video",url:"https://www.youtube.com/watch?v=SYR2DS1BnEg"}]},
     { title: "Close-and-hold", type: "Cue", duration: "5 min", description: "After a passing shot attempt, hold your net position. Practice not flinching backward. Commit to the volley.", cue: "Hold the net, move into the ball." , links: []}
   ],
   "Overheads": [
-    { title: "Drop-step footwork", type: "Drill", duration: "10 min", description: "Have a partner lob. Practice drop-stepping immediately: right foot back first (for right-handers), then adjust. Do 15 reps.", cue: "Drop-step the moment it goes up." , links: []},
+    { title: "Drop-step footwork", type: "Drill", duration: "10 min", description: "Have a partner lob. Practice drop-stepping immediately: right foot back first (for right-handers), then adjust. Do 15 reps.", cue: "Drop-step the moment it goes up." , links: [{label:"Tennis Australia shots",type:"Official guide",url:"https://www.tennis.com.au/play/discover-tennis/different-shots"}]},
     { title: "Scissor kick drill", type: "Drill", duration: "10 min", description: "On deep lobs, practice the scissor kick — jumping off one foot and landing on the other to generate power.", cue: "Jump off the back foot." , links: []}
   ],
   "Court movement": [
-    { title: "Spider drill", type: "Drill", duration: "10 min", description: "Place 5 balls at the four corners and center of the court. Sprint to each, touch it, return to center. Repeat 5 times.", cue: "Low and explosive off each step." , links: []},
+    { title: "Spider drill", type: "Drill", duration: "10 min", description: "Place 5 balls at the four corners and center of the court. Sprint to each, touch it, return to center. Repeat 5 times.", cue: "Low and explosive off each step." , links: [{label:"Tennis Australia technique",type:"Official guide",url:"https://www.tennis.com.au/play/discover-tennis/grip-and-technique"}]},
     { title: "Recovery line drill", type: "Drill", duration: "10 min", description: "After every shot in a rally, touch the center mark before the next ball is played. Forces active recovery.", cue: "Every shot ends with a recovery step." , links: []}
   ],
   "Footwork": [
-    { title: "Split-step timing drill", type: "Drill", duration: "10 min", description: "Rally with a partner. Both players must split-step as the opponent contacts the ball, every shot. Call it out if someone misses.", cue: "Land as they hit." , links: []},
+    { title: "Split-step timing drill", type: "Drill", duration: "10 min", description: "Rally with a partner. Both players must split-step as the opponent contacts the ball, every shot. Call it out if someone misses.", cue: "Land as they hit." , links: [{label:"Tennis Australia technique",type:"Official guide",url:"https://www.tennis.com.au/play/discover-tennis/grip-and-technique"}]},
     { title: "Short court footwork", type: "Drill", duration: "15 min", description: "Play points inside the service boxes only. Focus on quick adjustments and staying on the balls of your feet.", cue: "Stay light, stay ready." , links: []}
   ],
   "Net play": [
-    { title: "Approach and close", type: "Drill", duration: "15 min", description: "Hit a deep approach shot, then move all the way to the net. Practice closing quickly after the approach, not stopping mid-court.", cue: "Approach deep, close fast." , links: []},
+    { title: "Approach and close", type: "Drill", duration: "15 min", description: "Hit a deep approach shot, then move all the way to the net. Practice closing quickly after the approach, not stopping mid-court.", cue: "Approach deep, close fast." , links: [{label:"USTA offense at net",type:"Official guide",url:"https://www.usta.com/en/home/improve/tips-and-instruction/national/improve-your-tennis-game--offense-at-the-net.html"},{label:"USTA volley video",type:"Video",url:"https://www.youtube.com/watch?v=SYR2DS1BnEg"}]},
     { title: "Angled volley drill", type: "Drill", duration: "10 min", description: "Stand at the net. Partner feeds wide. Hit angled volleys away from the center. Aim to put the ball out of reach.", cue: "Open the face, guide the angle." , links: []}
   ],
   "Transition game": [
-    { title: "No-man's-land drill", type: "Drill", duration: "15 min", description: "Play points where you must decide after 3 shots: stay back or come in. Practice committing to the decision.", cue: "Decide early, commit fully." , links: []},
+    { title: "No-man's-land drill", type: "Drill", duration: "15 min", description: "Play points where you must decide after 3 shots: stay back or come in. Practice committing to the decision.", cue: "Decide early, commit fully." , links: [{label:"USTA offense at net",type:"Official guide",url:"https://www.usta.com/en/home/improve/tips-and-instruction/national/improve-your-tennis-game--offense-at-the-net.html"}]},
     { title: "Approach shot pattern", type: "Tactic", duration: "10 min", description: "Hit a deep crosscourt rally ball, then attack a short ball down the line. Finish with a volley. Repeat 10 times.", cue: "Cross to open, down the line to close." , links: []}
   ],
   "Shot selection": [
-    { title: "High-percentage rally", type: "Tactic", duration: "15 min", description: "Play crosscourt until you get a ball inside the service line. Only then go down the line or for a winner.", cue: "Wait for the short ball." , links: []},
+    { title: "High-percentage rally", type: "Tactic", duration: "15 min", description: "Play crosscourt until you get a ball inside the service line. Only then go down the line or for a winner.", cue: "Wait for the short ball." , links: [{label:"Tennis Australia shots",type:"Official guide",url:"https://www.tennis.com.au/play/discover-tennis/different-shots"}]},
     { title: "Risk/reward checklist", type: "Checklist", duration: "5 min", description: "Before each practice, decide: today I hit 80% of shots crosscourt and only attack when I am inside the baseline.", cue: "Set your pattern before you play." , links: []}
   ],
   "Consistency": [
-    { title: "20-ball rally target", type: "Drill", duration: "15 min", description: "Rally crosscourt with a partner. Count consecutive balls over the net without error. Target: 20 in a row.", cue: "Clear the net by 2 feet." , links: []},
+    { title: "20-ball rally target", type: "Drill", duration: "15 min", description: "Rally crosscourt with a partner. Count consecutive balls over the net without error. Target: 20 in a row.", cue: "Clear the net by 2 feet." , links: [{label:"USTA tips library",type:"Official guide",url:"https://www.usta.com/en/home/improve/tips-and-instruction.html"}]},
     { title: "Error tracking set", type: "Checklist", duration: "15 min", description: "Play a practice set. After each unforced error, say the type out loud: net, wide, long. Awareness drives improvement.", cue: "Name the error, fix the pattern." , links: []}
   ],
   "Depth": [
-    { title: "Cone depth drill", type: "Drill", duration: "15 min", description: "Place cones 3 feet inside both baselines. Rally and aim every ball past the cone. Count how many hit the zone.", cue: "High net clearance creates depth." , links: []},
+    { title: "Cone depth drill", type: "Drill", duration: "15 min", description: "Place cones 3 feet inside both baselines. Rally and aim every ball past the cone. Count how many hit the zone.", cue: "High net clearance creates depth." , links: [{label:"USTA forehand basics",type:"Official guide",url:"https://www.usta.com/en/home/improve/tips-and-instruction/national/learning-the-basics--forehand.html"}]},
     { title: "Depth cue", type: "Cue", duration: "5 min", description: "Aim your shots at the back fence, not the baseline. This mental cue naturally adds depth without over-swinging.", cue: "Aim at the fence, land at the line." , links: []}
   ],
   "Spin": [
-    { title: "Topspin rally drill", type: "Drill", duration: "15 min", description: "Rally crosscourt with heavy topspin. Let the ball bounce high. Focus on brushing up the back of the ball, not through it.", cue: "Low to high, brush the back." , links: []},
+    { title: "Topspin rally drill", type: "Drill", duration: "15 min", description: "Rally crosscourt with heavy topspin. Let the ball bounce high. Focus on brushing up the back of the ball, not through it.", cue: "Low to high, brush the back." , links: [{label:"USTA forehand topspin",type:"Official guide",url:"https://www.usta.com/en/home/improve/tips-and-instruction/national/learning-the-basics--forehand.html"},{label:"Forehand technique video",type:"Video",url:"https://www.youtube.com/watch?v=8V_KWh1Uoeo"}]},
     { title: "Slice backhand cue", type: "Cue", duration: "5 min", description: "For slice: high-to-low swing, open racquet face, contact under the ball. Practice 20 slow-motion shadow swings.", cue: "Cut through the back of the ball." , links: []}
   ],
   "Mental focus": [
-    { title: "Between-points reset", type: "Practice Plan", duration: "5 min", description: "Use the same 4-step routine between every point: (1) turn away, (2) take a breath, (3) set your strings, (4) walk to position.", cue: "Same routine, every point." , links: []},
+    { title: "Between-points reset", type: "Practice Plan", duration: "5 min", description: "Use the same 4-step routine between every point: (1) turn away, (2) take a breath, (3) set your strings, (4) walk to position.", cue: "Same routine, every point." , links: [{label:"USTA tips library",type:"Official guide",url:"https://www.usta.com/en/home/improve/tips-and-instruction.html"}]},
     { title: "One point at a time", type: "Cue", duration: "5 min", description: "After losing a point, say to yourself: next point only. Do not carry the previous point into the next one.", cue: "Short memory, full focus." , links: []}
   ],
   "Doubles positioning": [
-    { title: "Move with your partner", type: "Checklist", duration: "10 min", description: "In doubles, both players move together: one up, one up. One back, one back. Practice shadowing your partner during warmup.", cue: "Move as a unit, not alone." , links: []},
+    { title: "Move with your partner", type: "Checklist", duration: "10 min", description: "In doubles, both players move together: one up, one up. One back, one back. Practice shadowing your partner during warmup.", cue: "Move as a unit, not alone." , links: [{label:"USTA doubles tips",type:"Official guide",url:"https://www.usta.com/en/home/improve/tips-and-instruction/national/doubles-tennis-rules-tips.html"},{label:"USTA poaching in doubles",type:"Official guide",url:"https://www.usta.com/en/home/improve/tips-and-instruction/national/improve-your-game--poaching-in-doubles.html"}]},
     { title: "Poach timing drill", type: "Drill", duration: "10 min", description: "Net player poaches on every second shot from the opposing crosscourt player. Call the poach signal early: go or stay.", cue: "Decide before the ball is hit." , links: []}
   ],
   "Communication": [
-    { title: "Call every ball", type: "Checklist", duration: "10 min", description: "In every doubles rally, one partner calls mine or yours on every ball — no exceptions. Practice this in warmup before using in sets.", cue: "Loud and early, every time." , links: []},
+    { title: "Call every ball", type: "Checklist", duration: "10 min", description: "In every doubles rally, one partner calls mine or yours on every ball — no exceptions. Practice this in warmup before using in sets.", cue: "Loud and early, every time." , links: [{label:"USTA doubles tips",type:"Official guide",url:"https://www.usta.com/en/home/improve/tips-and-instruction/national/doubles-tennis-rules-tips.html"}]},
     { title: "Between-point chat", type: "Cue", duration: "5 min", description: "After every point in doubles, briefly touch racquets and exchange one word: good, next, or ready. Keeps energy up.", cue: "Stay connected with your partner." , links: []}
   ],
   "Fitness": [
-    { title: "On-court interval sprints", type: "Practice Plan", duration: "15 min", description: "Sprint baseline to net and back, 10 reps. Rest 30 seconds. Repeat 3 sets. Simulate match movement, not gym cardio.", cue: "Explosive first step, controlled stop." , links: []},
+    { title: "On-court interval sprints", type: "Practice Plan", duration: "15 min", description: "Sprint baseline to net and back, 10 reps. Rest 30 seconds. Repeat 3 sets. Simulate match movement, not gym cardio.", cue: "Explosive first step, controlled stop." , links: [{label:"USTA tips library",type:"Official guide",url:"https://www.usta.com/en/home/improve/tips-and-instruction.html"}]},
     { title: "Side-to-side shuffle", type: "Drill", duration: "10 min", description: "Shuffle sideline to sideline 10 times without crossing feet. Stay low and keep your weight forward.", cue: "Stay low, push off each step." , links: []}
   ],
 };
