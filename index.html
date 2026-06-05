@@ -453,6 +453,10 @@ html, body { height: 100%; font-family: var(--font); background: var(--page); co
 
     <!-- MATCH FORM -->
     <div id="log-match">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;">
+        <div id="log-match-header" style="font-size:17px;font-weight:800;color:var(--ink);">Log match</div>
+        <button id="m-cancel-btn" onclick="resetMatchForm();goPage('home',document.getElementById('nb-home'));" style="display:none;font-size:13px;font-weight:600;color:var(--ink3);background:none;border:none;cursor:pointer;font-family:var(--font);">Cancel</button>
+      </div>
       <!-- Result -->
       <div class="log-section">
         <div class="sl">Result</div>
@@ -524,6 +528,10 @@ html, body { height: 100%; font-family: var(--font); background: var(--page); co
 
     <!-- PRACTICE FORM -->
     <div id="log-practice" style="display:none;">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;">
+        <div id="log-practice-header" style="font-size:17px;font-weight:800;color:var(--ink);">Log practice</div>
+        <button id="p-cancel-btn" onclick="resetPracticeForm();goPage('home',document.getElementById('nb-home'));" style="display:none;font-size:13px;font-weight:600;color:var(--ink3);background:none;border:none;cursor:pointer;font-family:var(--font);">Cancel</button>
+      </div>
       <div class="log-section">
         <div class="sl">Session details</div>
         <div class="lf"><label>Date</label><input id="p-date" type="date"></div>
@@ -1000,6 +1008,8 @@ let allEntries = [];
 let mFocusSelected = new Set();
 let pFocusSelected = new Set();
 let extraSets = 0;
+let editingMatchId = null;   // null = new, string = editing existing
+let editingPracticeId = null;
 
 const FOCUS_AREAS = [
   'First serve','Second serve','Return','Forehand','Backhand',
@@ -1121,8 +1131,7 @@ async function saveMatch() {
   const btn = document.querySelector('#log-match .save-log-btn');
   btn.textContent = 'Saving…'; btn.disabled = true;
   const { score, score_sets } = buildScore();
-  const row = {
-    user_id: session.user.id,
+  const data = {
     played_at: document.getElementById('m-date').value || today(),
     match_type: document.getElementById('m-type').value,
     opponent: opp,
@@ -1136,13 +1145,18 @@ async function saveMatch() {
     needs_work: document.getElementById('m-needs')?.value.trim() || null,
     notes: document.getElementById('m-notes')?.value.trim() || null,
   };
-  console.log('[Courtside] saving match:', row);
+  console.log('[Courtside] saving match (edit:', editingMatchId, '):', data);
   try {
-    const saved = await sbFetch('/rest/v1/matches', 'POST', row);
-    console.log('[Courtside] match saved:', saved);
+    if (editingMatchId) {
+      await sbFetch(`/rest/v1/matches?id=eq.${editingMatchId}&user_id=eq.${session.user.id}`, 'PATCH', data);
+      console.log('[Courtside] match updated:', editingMatchId);
+    } else {
+      await sbFetch('/rest/v1/matches', 'POST', { ...data, user_id: session.user.id });
+      console.log('[Courtside] match inserted');
+    }
     resetMatchForm();
     await loadAppData();
-    showToast('Match saved! 🎾');
+    showToast(editingMatchId ? 'Match updated ✓' : 'Match saved! 🎾');
     goPage('home', document.getElementById('nb-home'));
   } catch(err) {
     console.error('[Courtside] match save error:', err.message);
@@ -1153,6 +1167,7 @@ async function saveMatch() {
 }
 
 function resetMatchForm() {
+  editingMatchId = null;
   ['m-opp','m-location','m-partner'].forEach(id => { const el = document.getElementById(id); if(el) el.value = ''; });
   ['m-worked','m-needs','m-notes'].forEach(id => { const el = document.getElementById(id); if(el) el.value = ''; });
   document.getElementById('m-date').value = today();
@@ -1160,6 +1175,11 @@ function resetMatchForm() {
   document.getElementById('m-partner-row').style.display = 'none';
   document.getElementById('m-optional').style.display = 'none';
   document.getElementById('m-arr').textContent = '▸';
+  // Reset log header
+  const header = document.getElementById('log-match-header');
+  if (header) header.textContent = 'Log match';
+  const cancelBtn = document.getElementById('m-cancel-btn');
+  if (cancelBtn) cancelBtn.style.display = 'none';
   setResult('win');
   mFocusSelected = new Set();
   resetScoreInputs();
@@ -1170,8 +1190,7 @@ function resetMatchForm() {
 async function savePractice() {
   const btn = document.querySelector('#log-practice .save-log-btn');
   btn.textContent = 'Saving…'; btn.disabled = true;
-  const row = {
-    user_id: session.user.id,
+  const data = {
     practiced_at: document.getElementById('p-date').value || today(),
     duration_minutes: parseInt(document.getElementById('p-duration').value) || 60,
     practice_type: document.getElementById('p-type').value,
@@ -1180,13 +1199,18 @@ async function savePractice() {
     notes: document.getElementById('p-notes').value.trim() || null,
     next_goal: document.getElementById('p-goal').value.trim() || null,
   };
-  console.log('[Courtside] saving practice:', row);
+  console.log('[Courtside] saving practice (edit:', editingPracticeId, '):', data);
   try {
-    const saved = await sbFetch('/rest/v1/practices', 'POST', row);
-    console.log('[Courtside] practice saved:', saved);
+    if (editingPracticeId) {
+      await sbFetch(`/rest/v1/practices?id=eq.${editingPracticeId}&user_id=eq.${session.user.id}`, 'PATCH', data);
+      console.log('[Courtside] practice updated:', editingPracticeId);
+    } else {
+      await sbFetch('/rest/v1/practices', 'POST', { ...data, user_id: session.user.id });
+      console.log('[Courtside] practice inserted');
+    }
     resetPracticeForm();
     await loadAppData();
-    showToast('Practice logged! 💪');
+    showToast(editingPracticeId ? 'Practice updated ✓' : 'Practice logged! 💪');
     goPage('home', document.getElementById('nb-home'));
   } catch(err) {
     console.error('[Courtside] practice save error:', err.message);
@@ -1197,10 +1221,15 @@ async function savePractice() {
 }
 
 function resetPracticeForm() {
+  editingPracticeId = null;
   ['p-notes','p-goal'].forEach(id => { const el = document.getElementById(id); if(el) el.value = ''; });
   document.getElementById('p-date').value = today();
   document.getElementById('p-duration').value = '60';
   document.getElementById('p-type').value = 'hitting';
+  const header = document.getElementById('log-practice-header');
+  if (header) header.textContent = 'Log practice';
+  const cancelBtn = document.getElementById('p-cancel-btn');
+  if (cancelBtn) cancelBtn.style.display = 'none';
   pFocusSelected = new Set();
   renderFocusChips('p-focus-chips', pFocusSelected);
 }
@@ -1217,6 +1246,79 @@ async function loadAppData() {
     console.error('[Courtside] loadAppData error:', err.message);
     if (homeRecent) homeRecent.innerHTML = `<div class="empty-state" style="color:#e74c3c;">Could not load activity: ${err.message}</div>`;
   }
+}
+
+// ── Edit match ────────────────────────────────────────────────────────────────
+function editMatch(id) {
+  const e = allEntries.find(x => x.id === id && x._kind === 'match');
+  if (!e) return;
+  editingMatchId = id;
+  setLogType('match');
+  goPage('log', document.getElementById('nb-log'));
+
+  // Populate fields
+  document.getElementById('m-date').value = e.played_at || today();
+  document.getElementById('m-opp').value = e.opponent || '';
+  document.getElementById('m-location').value = e.location || '';
+  document.getElementById('m-type').value = e.match_type || 'singles';
+  const isDoubles = ['doubles','mixed'].includes(e.match_type);
+  document.getElementById('m-partner-row').style.display = isDoubles ? 'block' : 'none';
+  document.getElementById('m-partner').value = e.partner || '';
+  setResult(e.result || 'win');
+
+  // Populate score sets
+  resetScoreInputs();
+  const sets = e.score_sets || [];
+  sets.forEach((s, i) => {
+    if (i === 2) addSet();
+    const me = document.getElementById(`s${i}-me`);
+    const opp = document.getElementById(`s${i}-opp`);
+    if (me) me.value = s.my_games ?? '';
+    if (opp) opp.value = s.opponent_games ?? '';
+  });
+
+  // Populate focus chips
+  mFocusSelected = new Set(e.focus_areas || []);
+  renderFocusChips('m-focus-chips', mFocusSelected);
+
+  // Populate notes
+  if (e.worked_well || e.needs_work || e.notes) {
+    document.getElementById('m-optional').style.display = 'block';
+    document.getElementById('m-arr').textContent = '▾';
+  }
+  if (document.getElementById('m-worked')) document.getElementById('m-worked').value = e.worked_well || '';
+  if (document.getElementById('m-needs')) document.getElementById('m-needs').value = e.needs_work || '';
+  if (document.getElementById('m-notes')) document.getElementById('m-notes').value = e.notes || '';
+
+  // Update UI to show edit mode
+  const header = document.getElementById('log-match-header');
+  if (header) header.textContent = 'Edit match';
+  const cancelBtn = document.getElementById('m-cancel-btn');
+  if (cancelBtn) cancelBtn.style.display = 'block';
+  window.scrollTo(0, 0);
+}
+
+function editPractice(id) {
+  const e = allEntries.find(x => x.id === id && x._kind === 'practice');
+  if (!e) return;
+  editingPracticeId = id;
+  setLogType('practice');
+  goPage('log', document.getElementById('nb-log'));
+
+  document.getElementById('p-date').value = e.practiced_at || today();
+  document.getElementById('p-duration').value = e.duration_minutes || 60;
+  document.getElementById('p-type').value = e.practice_type || 'hitting';
+  document.getElementById('p-notes').value = e.notes || '';
+  document.getElementById('p-goal').value = e.next_goal || '';
+
+  pFocusSelected = new Set(e.focus_areas || []);
+  renderFocusChips('p-focus-chips', pFocusSelected);
+
+  const header = document.getElementById('log-practice-header');
+  if (header) header.textContent = 'Edit practice';
+  const cancelBtn = document.getElementById('p-cancel-btn');
+  if (cancelBtn) cancelBtn.style.display = 'block';
+  window.scrollTo(0, 0);
 }
 
 // ── Load entries ───────────────────────────────────────────────────────────────
@@ -1274,11 +1376,12 @@ function entryCard(e) {
   const meta = isMatch
     ? `${formatDate(e._date)}${e.location ? ' · ' + e.location : ''}`
     : `${formatDate(e._date)}${e.duration_minutes ? ' · ' + e.duration_minutes + ' min' : ''}`;
-  const scoreStr = isMatch && e.score ? `<div class="entry-score">${formatScore(e.score)}</div>` : '';
+  const scoreStr = isMatch ? (formatScore(e) ? `<div class="entry-score">${formatScore(e)}</div>` : '') : '';
   const areas = (isMatch ? e.focus_areas : e.focus_areas) || [];
   const chips = areas.length
     ? `<div class="entry-chips">${areas.map(a => `<span class="entry-chip">${a}</span>`).join('')}</div>`
     : '';
+  const editFn = isMatch ? `editMatch('${e.id}')` : `editPractice('${e.id}')`;
   return `<div class="entry-card ${cls}">
     <div class="entry-badge ${cls}">${badge}</div>
     <div style="flex:1;min-width:0;">
@@ -1286,7 +1389,10 @@ function entryCard(e) {
       <div class="entry-meta">${meta}</div>
       ${chips}
     </div>
-    ${scoreStr}
+    <div style="display:flex;flex-direction:column;align-items:flex-end;gap:4px;flex-shrink:0;">
+      ${scoreStr}
+      <button onclick="${editFn}" style="font-size:11px;font-weight:600;color:var(--ink3);background:none;border:none;cursor:pointer;padding:2px 0;font-family:var(--font);">Edit</button>
+    </div>
   </div>`;
 }
 
@@ -1296,14 +1402,28 @@ function formatDate(d) {
   return new Date(y, m-1, day).toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' });
 }
 
-function formatScore(score) {
-  // Normalize score string to "X-Y, X-Y" format
-  if (!score) return '';
-  return score
-    .split(/,\s*/)
-    .map(s => s.trim().replace(/[–—]/, '-'))
-    .filter(s => /\d/.test(s))
-    .join(', ');
+function formatScore(match) {
+  // If match is a string (legacy), treat as score string
+  if (typeof match === 'string') {
+    return match.trim()
+      .replace(/\s*,\s*/g, ', ')
+      .replace(/(\d+[-–—]\d+)\s+(?=\d+[-–—]\d+)/g, '$1, ')
+      .replace(/[–—]/g, '-');
+  }
+  // Prefer structured score_sets
+  if (Array.isArray(match.score_sets) && match.score_sets.length > 0) {
+    return match.score_sets
+      .map(s => `${s.my_games}-${s.opponent_games}`)
+      .join(', ');
+  }
+  // Fall back to score string
+  if (typeof match.score === 'string' && match.score) {
+    return match.score.trim()
+      .replace(/\s*,\s*/g, ', ')
+      .replace(/(\d+[-–—]\d+)\s+(?=\d+[-–—]\d+)/g, '$1, ')
+      .replace(/[–—]/g, '-');
+  }
+  return '';
 }
 
 // ── Render activity ────────────────────────────────────────────────────────────
