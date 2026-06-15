@@ -372,6 +372,29 @@ html, body { height: 100%; font-family: var(--font); background: var(--page); co
 .vis-toggle.off { background: #ccc; }
 .vis-toggle.off span { left: 2px; }
 
+/* ── Player list — slim premium rows ── */
+.player-row { display: flex; align-items: center; gap: 11px; padding: 10px 0; border-bottom: 1px solid var(--border); cursor: pointer; }
+.player-row:last-child { border-bottom: none; }
+.player-row:active { opacity: .7; }
+.player-av-sm { width: 34px; height: 34px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 12px; font-weight: 800; color: #fff; flex-shrink: 0; overflow: hidden; }
+.player-av-sm img { width: 100%; height: 100%; object-fit: cover; border-radius: 50%; }
+.player-row-name { font-size: 14px; font-weight: 600; color: var(--ink); line-height: 1.2; }
+.player-row-meta { font-size: 11px; color: var(--ink3); margin-top: 1px; }
+.player-row-chevron { color: var(--ink4); font-size: 14px; flex-shrink: 0; margin-left: auto; }
+
+/* ── Profile avatar upload ── */
+.av-upload-wrap { position: relative; width: 72px; height: 72px; margin: 0 auto 12px; cursor: pointer; }
+.av-upload-wrap img, .av-upload-wrap .av-initials { width: 72px; height: 72px; border-radius: 50%; object-fit: cover; display: flex; align-items: center; justify-content: center; font-size: 24px; font-weight: 800; color: #fff; }
+.av-upload-badge { position: absolute; bottom: 0; right: 0; width: 22px; height: 22px; border-radius: 50%; background: var(--season-bg1); border: 2px solid #fff; display: flex; align-items: center; justify-content: center; }
+.av-upload-badge svg { width: 11px; height: 11px; stroke: #fff; }
+
+/* ── Detail sheet rows ── */
+.detail-row { display: flex; align-items: center; justify-content: space-between; padding: 11px 0; border-bottom: 1px solid var(--border); }
+.detail-row:last-of-type { border-bottom: none; }
+.detail-label { font-size: 11px; font-weight: 700; letter-spacing: .5px; text-transform: uppercase; color: var(--ink3); }
+.detail-value { font-size: 14px; font-weight: 500; color: var(--ink); }
+.detail-link { font-size: 14px; font-weight: 600; color: var(--season-bg1); text-decoration: none; }
+
 /* ── Toast ── */
 #toast { position: fixed; bottom: calc(env(safe-area-inset-bottom) + 80px); left: 50%; transform: translateX(-50%) translateY(10px); background: #1a1a1a; color: #fff; padding: 10px 20px; border-radius: 20px; font-size: 13px; font-weight: 600; opacity: 0; transition: all .25s; z-index: 999; white-space: nowrap; pointer-events: none; }
 #toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
@@ -1112,7 +1135,20 @@ function openProfile() {
 
   document.getElementById('prof-body').innerHTML = `
     <div style="text-align:center;margin-bottom:16px;">
-      <div class="prof-av" style="background:linear-gradient(135deg,var(--season-bg1),var(--season-bg2));">${ini}</div>
+      <div class="av-upload-wrap" title="Profile photo">
+        ${profile.avatar_url
+          ? `<img src="${profile.avatar_url}?t=${Date.now()}" style="width:72px;height:72px;border-radius:50%;object-fit:cover;" onerror="this.style.display='none';this.nextElementSibling.style.display='flex'"><div class="av-initials" style="display:none;background:linear-gradient(135deg,var(--season-bg1),var(--season-bg2));">${ini}</div>`
+          : `<div class="av-initials" style="background:linear-gradient(135deg,var(--season-bg1),var(--season-bg2));">${ini}</div>`
+        }
+        <div class="av-upload-badge">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M23 19a2 2 0 01-2 2H3a2 2 0 01-2-2V8a2 2 0 012-2h4l2-3h6l2 3h4a2 2 0 012 2z"/><circle cx="12" cy="13" r="4"/></svg>
+        </div>
+      </div>
+      <input type="file" id="av-file-input" accept="image/jpeg,image/png,image/webp" style="display:none" onchange="handleAvatarUpload(this)">
+      <div style="display:flex;justify-content:center;gap:12px;margin-bottom:4px;">
+        <button type="button" onclick="document.getElementById('av-file-input').click()" style="font-size:12px;font-weight:600;color:var(--season-bg1);background:none;border:none;cursor:pointer;font-family:var(--font);">${profile.avatar_url ? 'Replace photo' : 'Add photo'}</button>
+        ${profile.avatar_url ? `<button type="button" onclick="removeAvatar()" style="font-size:12px;font-weight:600;color:var(--ink3);background:none;border:none;cursor:pointer;font-family:var(--font);">Remove</button>` : ''}
+      </div>
       <div class="prof-name-display">${name || '—'}</div>
       ${username ? `<div class="prof-username">@${username}</div>` : ''}
       ${club ? `<div style="font-size:12px;color:var(--ink3);margin-top:3px;">${club}</div>` : ''}
@@ -1194,6 +1230,92 @@ function openProfile() {
 
 function closeProfile() {
   document.getElementById('prof-overlay').classList.remove('on');
+}
+
+// ── Avatar upload ──────────────────────────────────────────────────────────────
+async function handleAvatarUpload(input) {
+  const file = input.files?.[0];
+  if (!file) return;
+  if (file.size > 2 * 1024 * 1024) { showToast('Photo must be under 2 MB'); input.value = ''; return; }
+  showToast('Uploading…');
+  try {
+    const compressed = await compressImage(file, 400);
+    const path = `${profile.id}/avatar.jpg`;
+    const uploadRes = await fetch(
+      `${SUPA_URL}/storage/v1/object/avatars/${path}`,
+      {
+        method: 'POST',
+        headers: {
+          'Authorization': 'Bearer ' + session.access_token,
+          'apikey': SUPA_ANON,
+          'Content-Type': 'image/jpeg',
+          'x-upsert': 'true',
+        },
+        body: compressed,
+      }
+    );
+    if (!uploadRes.ok) {
+      const err = await uploadRes.json().catch(() => ({}));
+      throw new Error(err.message || 'Upload failed');
+    }
+    // Cache-bust the URL so the browser loads the new photo
+    const avatarUrl = `${SUPA_URL}/storage/v1/object/public/avatars/${path}?t=${Date.now()}`;
+    const cleanUrl = `${SUPA_URL}/storage/v1/object/public/avatars/${path}`;
+    await sbFetch(`/rest/v1/profiles?id=eq.${profile.id}`, 'PATCH', { avatar_url: cleanUrl });
+    profile.avatar_url = cleanUrl;
+    store('cs_profile', profile);
+    showToast('Photo updated ✓');
+    input.value = '';
+    openProfile();
+  } catch(e) {
+    showToast('Could not upload: ' + e.message);
+    input.value = '';
+  }
+}
+
+async function removeAvatar() {
+  if (!profile.avatar_url) return;
+  if (!confirm('Remove your profile photo?')) return;
+  try {
+    // Delete from storage
+    await fetch(
+      `${SUPA_URL}/storage/v1/object/avatars/${profile.id}/avatar.jpg`,
+      {
+        method: 'DELETE',
+        headers: {
+          'Authorization': 'Bearer ' + session.access_token,
+          'apikey': SUPA_ANON,
+        },
+      }
+    );
+    // Clear from profile
+    await sbFetch(`/rest/v1/profiles?id=eq.${profile.id}`, 'PATCH', { avatar_url: null });
+    profile.avatar_url = null;
+    store('cs_profile', profile);
+    showToast('Photo removed');
+    openProfile();
+  } catch(e) {
+    showToast('Could not remove photo: ' + e.message);
+  }
+}
+
+async function compressImage(file, maxSize) {
+  return new Promise((resolve, reject) => {
+    const img = new Image();
+    const url = URL.createObjectURL(file);
+    img.onload = () => {
+      URL.revokeObjectURL(url);
+      const canvas = document.createElement('canvas');
+      let w = img.width, h = img.height;
+      if (w > h) { if (w > maxSize) { h = h * maxSize / w; w = maxSize; } }
+      else { if (h > maxSize) { w = w * maxSize / h; h = maxSize; } }
+      canvas.width = w; canvas.height = h;
+      canvas.getContext('2d').drawImage(img, 0, 0, w, h);
+      canvas.toBlob(blob => blob ? resolve(blob) : reject(new Error('Compression failed')), 'image/jpeg', 0.82);
+    };
+    img.onerror = reject;
+    img.src = url;
+  });
 }
 
 async function saveProfileEdits() {
@@ -1826,7 +1948,7 @@ async function loadClubPlayers(clubId) {
   if (!el) return;
   el.innerHTML = '<div class="club-empty">Loading players…</div>';
   try {
-    const rows = await sbFetch(`/rest/v1/profiles?club_id=eq.${clubId}&community_visibility=neq.private&id=neq.${profile.id}&select=id,full_name,username,home_club,usta_rating,utr_rating,tennis_record_url,avatar_color,avatar_text_color,show_usta_rating,show_utr_rating,show_tennis_record,community_visibility&order=full_name.asc`);
+    const rows = await sbFetch(`/rest/v1/profiles?club_id=eq.${clubId}&community_visibility=neq.private&id=neq.${profile.id}&select=id,full_name,username,club_id,usta_rating,utr_rating,tennis_record_url,avatar_color,avatar_text_color,avatar_url,show_usta_rating,show_utr_rating,show_tennis_record,community_visibility&order=full_name.asc`);
     clubPlayers = Array.isArray(rows) ? rows.filter(p => p.community_visibility !== 'private') : [];
     console.log('[Courtside] club players loaded:', clubPlayers.length);
     renderPlayerList(clubPlayers);
@@ -1834,6 +1956,18 @@ async function loadClubPlayers(clubId) {
     console.error('[Courtside] club players error:', e.message);
     el.innerHTML = `<div class="club-empty"><div style="color:#e74c3c;margin-bottom:12px;font-size:13px;">Could not load players: ${e.message}</div><button onclick="renderClub()" style="background:var(--season-bg1);color:#fff;border:none;border-radius:var(--r);padding:10px 20px;font-family:var(--font);font-size:13px;font-weight:600;cursor:pointer;">↻ Retry</button></div>`;
   }
+}
+
+function avatarEl(p, size='sm') {
+  const ini = (p.full_name || '?').split(' ').map(w => w[0]).join('').slice(0,2).toUpperCase();
+  const bg = p.avatar_color || 'var(--season-bg1)';
+  const fg = p.avatar_text_color || '#fff';
+  const sz = size === 'lg' ? '64px' : '34px';
+  const fs = size === 'lg' ? '22px' : '12px';
+  if (p.avatar_url) {
+    return `<div style="width:${sz};height:${sz};border-radius:50%;overflow:hidden;flex-shrink:0;"><img src="${p.avatar_url}" style="width:100%;height:100%;object-fit:cover;" onerror="this.parentElement.innerHTML='<div style=\"width:${sz};height:${sz};border-radius:50%;background:${bg};color:${fg};display:flex;align-items:center;justify-content:center;font-size:${fs};font-weight:800;\">${ini}</div>'"></div>`;
+  }
+  return `<div style="width:${sz};height:${sz};border-radius:50%;background:${bg};color:${fg};display:flex;align-items:center;justify-content:center;font-size:${fs};font-weight:800;flex-shrink:0;">${ini}</div>`;
 }
 
 function renderPlayerList(players) {
@@ -1844,19 +1978,18 @@ function renderPlayerList(players) {
     return;
   }
   el.innerHTML = players.map(p => {
-    const ini = (p.full_name || '?').split(' ').map(w => w[0]).join('').slice(0, 2).toUpperCase();
-    const bg = p.avatar_color || 'var(--season-bg1)';
-    const fg = p.avatar_text_color || '#fff';
     const meta = [];
     if (p.show_usta_rating && p.usta_rating) meta.push('USTA ' + p.usta_rating);
     if (p.show_utr_rating && p.utr_rating) meta.push('UTR ' + p.utr_rating);
-    return `<div class="player-card" onclick="openPlayerProfile('${p.id}')">
-      <div class="player-av" style="background:${bg};color:${fg};">${ini}</div>
+    const clubObj = allClubs.find(c => c.id === p.club_id);
+    if (clubObj) meta.push(clubObj.name);
+    return `<div class="player-row" onclick="openPlayerProfile('${p.id}')">
+      ${avatarEl(p, 'sm')}
       <div style="flex:1;min-width:0;">
-        <div class="player-name">${p.full_name || '—'}</div>
-        <div class="player-meta">${meta.join(' · ') || '&nbsp;'}</div>
+        <div class="player-row-name">${p.full_name || '—'}</div>
+        ${meta.length ? `<div class="player-row-meta">${meta.join(' · ')}</div>` : ''}
       </div>
-      ${p.username ? `<div class="player-badge">@${p.username}</div>` : ''}
+      <span class="player-row-chevron">›</span>
     </div>`;
   }).join('');
 }
