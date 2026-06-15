@@ -864,7 +864,7 @@ async function fetchAndRouteProfile() {
       hideLoading();
       console.log('[Courtside] rendering: profile-setup');
       showScreen('profile-setup');
-      renderSetup(uid);
+      await renderSetup(uid);
     }
   } catch(err) {
     hideLoading();
@@ -874,8 +874,18 @@ async function fetchAndRouteProfile() {
 }
 
 // ── Profile setup ─────────────────────────────────────────────────────────────
-function renderSetup(uid) {
-  // Render setup with all required fields, sign out, and reset buttons
+async function renderSetup(uid) {
+  // Load clubs if not already loaded
+  if (allClubs.length === 0) await loadClubs().catch(() => {});
+
+  const clubOptions = [
+    '<option value="">No club / Not listed</option>',
+    ...allClubs.map(c => {
+      const label = c.name + (c.city || c.state ? ' — ' + [c.city, c.state].filter(Boolean).join(', ') : '');
+      return `<option value="${c.id}">${label}</option>`;
+    })
+  ].join('');
+
   document.getElementById('profile-setup-body').innerHTML = `
     <div class="setup-field">
       <label>Full name <span style="color:#e74c3c;">*</span></label>
@@ -886,8 +896,10 @@ function renderSetup(uid) {
       <input id="ps-username" type="text" placeholder="@yourname">
     </div>
     <div class="setup-field">
-      <label>Home club</label>
-      <input id="ps-club" type="text" placeholder="e.g. Mercer Island CC">
+      <label>Club</label>
+      <select id="ps-club-id" style="width:100%;font-family:var(--font);font-size:16px;color:var(--ink);background:#fff;border:1.5px solid var(--border);border-radius:var(--rsm);padding:12px 14px;outline:none;-webkit-appearance:none;">
+        ${clubOptions}
+      </select>
     </div>
     <div class="setup-field">
       <label>USTA rating</label>
@@ -896,13 +908,6 @@ function renderSetup(uid) {
         <option>2.5</option><option>3.0</option><option>3.5</option>
         <option>4.0</option><option>4.5</option><option>5.0</option>
         <option>5.5</option><option>6.0+</option>
-      </select>
-    </div>
-    <div class="setup-field">
-      <label>Profile visibility</label>
-      <select id="ps-visibility">
-        <option value="public">Public — anyone can find me</option>
-        <option value="private" selected>Private — only me</option>
       </select>
     </div>
     <div id="setup-err" class="setup-err"></div>
@@ -922,15 +927,23 @@ async function saveSetup(uid) {
   const btn = document.getElementById('ps-btn');
   btn.textContent = 'Saving…'; btn.disabled = true;
 
+  const clubIdVal = document.getElementById('ps-club-id')?.value || null;
+  const selectedClub = allClubs.find(c => c.id === clubIdVal);
+
   const profileData = {
     id: uid,
     full_name: name,
     username: document.getElementById('ps-username').value.trim().replace('@', '') || null,
-    home_club: document.getElementById('ps-club').value.trim() || null,
+    club_id: clubIdVal || null,
+    home_club: selectedClub?.name || null,
     usta_rating: document.getElementById('ps-usta').value || null,
-    profile_visibility: document.getElementById('ps-visibility').value,
+    profile_visibility: 'private',
+    community_visibility: clubIdVal ? 'club' : 'private',
     utr_rating: null,
     tennis_record_url: null,
+    show_usta_rating: false,
+    show_utr_rating: false,
+    show_tennis_record: false,
   };
 
   console.log('[Courtside] saving profile:', profileData);
@@ -2366,7 +2379,7 @@ async function initializeApp() {
       // No profile yet — show setup
       hideLoading();
       showScreen('profile-setup');
-      renderSetup(session.user?.id);
+      renderSetup(session.user?.id).catch(e => console.error("[Courtside] renderSetup error:", e.message));
       return;
     }
   } catch(e) {
