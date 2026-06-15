@@ -409,11 +409,34 @@ html, body { height: 100%; font-family: var(--font); background: var(--page); co
     <div class="auth-hero">
       <div class="auth-ball">
         <svg width="52" height="52" viewBox="0 0 52 52" xmlns="http://www.w3.org/2000/svg">
-          <circle cx="26" cy="26" r="24" fill="#c8e63a"/>
-          <path d="M 7 20 C 13 26 13 26 7 32" fill="none" stroke="white" stroke-width="2.8" stroke-linecap="round"/>
-          <path d="M 45 20 C 39 26 39 26 45 32" fill="none" stroke="white" stroke-width="2.8" stroke-linecap="round"/>
-          <path d="M 17 7 C 21 15 31 15 35 7" fill="none" stroke="white" stroke-width="2.8" stroke-linecap="round"/>
-          <path d="M 17 45 C 21 37 31 37 35 45" fill="none" stroke="white" stroke-width="2.8" stroke-linecap="round"/>
+          <defs>
+            <radialGradient id="ball-grad" cx="40%" cy="35%" r="65%">
+              <stop offset="0%" stop-color="#e8f44a"/>
+              <stop offset="60%" stop-color="#c8e63a"/>
+              <stop offset="100%" stop-color="#b8a820" stop-opacity="0.6"/>
+            </radialGradient>
+            <radialGradient id="ball-accent" cx="75%" cy="72%" r="45%">
+              <stop offset="0%" stop-color="#d96010" stop-opacity="0.22"/>
+              <stop offset="100%" stop-color="#d96010" stop-opacity="0"/>
+            </radialGradient>
+            <filter id="ball-glow" x="-15%" y="-15%" width="130%" height="130%">
+              <feGaussianBlur stdDeviation="1.5" result="blur"/>
+              <feMerge><feMergeNode in="blur"/><feMergeNode in="SourceGraphic"/></feMerge>
+            </filter>
+          </defs>
+          <!-- Shadow -->
+          <ellipse cx="26" cy="46" rx="14" ry="3" fill="rgba(0,0,0,0.13)"/>
+          <!-- Ball base -->
+          <circle cx="26" cy="25" r="22" fill="url(#ball-grad)" filter="url(#ball-glow)"/>
+          <!-- Orange accent lower-right -->
+          <circle cx="26" cy="25" r="22" fill="url(#ball-accent)"/>
+          <!-- Subtle highlight top-left -->
+          <ellipse cx="19" cy="17" rx="7" ry="5" fill="white" opacity="0.12" transform="rotate(-30 19 17)"/>
+          <!-- White seams -->
+          <path d="M 8 19 C 15 25 15 25 8 31" fill="none" stroke="white" stroke-width="2.2" stroke-linecap="round" opacity="0.92"/>
+          <path d="M 44 19 C 37 25 37 25 44 31" fill="none" stroke="white" stroke-width="2.2" stroke-linecap="round" opacity="0.92"/>
+          <path d="M 17 6 C 22 14 30 14 35 6" fill="none" stroke="white" stroke-width="2.2" stroke-linecap="round" opacity="0.92"/>
+          <path d="M 17 44 C 22 36 30 36 35 44" fill="none" stroke="white" stroke-width="2.2" stroke-linecap="round" opacity="0.92"/>
         </svg>
       </div>
       <h1>Courtside</h1>
@@ -449,11 +472,34 @@ html, body { height: 100%; font-family: var(--font); background: var(--page); co
     <div class="auth-hero">
       <div class="auth-ball">
         <svg width="52" height="52" viewBox="0 0 52 52" xmlns="http://www.w3.org/2000/svg">
-          <circle cx="26" cy="26" r="24" fill="#c8e63a"/>
-          <path d="M 7 20 C 13 26 13 26 7 32" fill="none" stroke="white" stroke-width="2.8" stroke-linecap="round"/>
-          <path d="M 45 20 C 39 26 39 26 45 32" fill="none" stroke="white" stroke-width="2.8" stroke-linecap="round"/>
-          <path d="M 17 7 C 21 15 31 15 35 7" fill="none" stroke="white" stroke-width="2.8" stroke-linecap="round"/>
-          <path d="M 17 45 C 21 37 31 37 35 45" fill="none" stroke="white" stroke-width="2.8" stroke-linecap="round"/>
+          <defs>
+            <radialGradient id="ball-grad" cx="40%" cy="35%" r="65%">
+              <stop offset="0%" stop-color="#e8f44a"/>
+              <stop offset="60%" stop-color="#c8e63a"/>
+              <stop offset="100%" stop-color="#b8a820" stop-opacity="0.6"/>
+            </radialGradient>
+            <radialGradient id="ball-accent" cx="75%" cy="72%" r="45%">
+              <stop offset="0%" stop-color="#d96010" stop-opacity="0.22"/>
+              <stop offset="100%" stop-color="#d96010" stop-opacity="0"/>
+            </radialGradient>
+            <filter id="ball-glow" x="-15%" y="-15%" width="130%" height="130%">
+              <feGaussianBlur stdDeviation="1.5" result="blur"/>
+              <feMerge><feMergeNode in="blur"/><feMergeNode in="SourceGraphic"/></feMerge>
+            </filter>
+          </defs>
+          <!-- Shadow -->
+          <ellipse cx="26" cy="46" rx="14" ry="3" fill="rgba(0,0,0,0.13)"/>
+          <!-- Ball base -->
+          <circle cx="26" cy="25" r="22" fill="url(#ball-grad)" filter="url(#ball-glow)"/>
+          <!-- Orange accent lower-right -->
+          <circle cx="26" cy="25" r="22" fill="url(#ball-accent)"/>
+          <!-- Subtle highlight top-left -->
+          <ellipse cx="19" cy="17" rx="7" ry="5" fill="white" opacity="0.12" transform="rotate(-30 19 17)"/>
+          <!-- White seams -->
+          <path d="M 8 19 C 15 25 15 25 8 31" fill="none" stroke="white" stroke-width="2.2" stroke-linecap="round" opacity="0.92"/>
+          <path d="M 44 19 C 37 25 37 25 44 31" fill="none" stroke="white" stroke-width="2.2" stroke-linecap="round" opacity="0.92"/>
+          <path d="M 17 6 C 22 14 30 14 35 6" fill="none" stroke="white" stroke-width="2.2" stroke-linecap="round" opacity="0.92"/>
+          <path d="M 17 44 C 22 36 30 36 35 44" fill="none" stroke="white" stroke-width="2.2" stroke-linecap="round" opacity="0.92"/>
         </svg>
       </div>
       <h1>Courtside</h1>
