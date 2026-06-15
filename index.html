@@ -421,6 +421,35 @@ html, body { height: 100%; font-family: var(--font); background: var(--page); co
     </div>
   </div>
 
+  <!-- PASSWORD RESET SCREEN -->
+  <div id="reset-screen" style="display:none;position:fixed;inset:0;background:var(--page);z-index:510;overflow-y:auto;">
+    <div class="auth-hero">
+      <div class="auth-ball">
+        <svg width="52" height="52" viewBox="0 0 52 52" xmlns="http://www.w3.org/2000/svg">
+          <circle cx="26" cy="26" r="24" fill="#c8e63a"/>
+          <path d="M 7 20 C 13 26 13 26 7 32" fill="none" stroke="white" stroke-width="2.8" stroke-linecap="round"/>
+          <path d="M 45 20 C 39 26 39 26 45 32" fill="none" stroke="white" stroke-width="2.8" stroke-linecap="round"/>
+          <path d="M 17 7 C 21 15 31 15 35 7" fill="none" stroke="white" stroke-width="2.8" stroke-linecap="round"/>
+          <path d="M 17 45 C 21 37 31 37 35 45" fill="none" stroke="white" stroke-width="2.8" stroke-linecap="round"/>
+        </svg>
+      </div>
+      <h1>Courtside</h1>
+      <p>Set new password</p>
+    </div>
+    <div class="auth-body">
+      <div class="auth-field">
+        <label>New password</label>
+        <input id="rp-pass" type="password" placeholder="At least 6 characters" autocomplete="new-password">
+      </div>
+      <div class="auth-field">
+        <label>Confirm password</label>
+        <input id="rp-confirm" type="password" placeholder="Repeat your new password" autocomplete="new-password">
+      </div>
+      <div class="auth-err" id="reset-err"></div>
+      <button class="auth-btn" id="rp-btn" onclick="submitNewPassword()">Save new password →</button>
+    </div>
+  </div>
+
   <!-- PROFILE SETUP -->
   <div id="profile-setup">
     <div class="setup-hero">
@@ -763,8 +792,12 @@ async function sbFetch(path, method = 'GET', body = null) {
   return data;
 }
 
-async function sbAuth(path, body) {
-  const res = await fetch(SUPA_URL + path, {
+async function sbAuth(path, body, params = {}) {
+  let url = SUPA_URL + path;
+  if (Object.keys(params).length) {
+    url += '?' + new URLSearchParams(params).toString();
+  }
+  const res = await fetch(url, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json', 'apikey': SUPA_ANON },
     body: JSON.stringify(body),
@@ -834,13 +867,55 @@ async function signUp() {
 function forgotPassword() {
   const email = document.getElementById('si-email').value.trim();
   if (!email) { setAuthErr('Enter your email first.'); return; }
-  sbAuth('/auth/v1/recover', { email })
-    .then(() => showToast('Reset email sent — check your inbox'))
-    .catch(e => setAuthErr(e.message));
+  sbAuth('/auth/v1/recover', {
+    email,
+    gotrue_meta_security: {},
+  }, { redirectTo: 'https://mannymcb.github.io/Courtside/' })
+    .then(() => {
+      setAuthErr('');
+      showToast('Reset email sent — check your inbox');
+    })
+    .catch(e => setAuthErr(e.message || 'Could not send reset email.'));
 }
 
 function signOut() {
   resetApp();
+}
+
+async function submitNewPassword() {
+  const pass = document.getElementById('rp-pass').value;
+  const confirm = document.getElementById('rp-confirm').value;
+  const errEl = document.getElementById('reset-err');
+  errEl.classList.remove('show');
+  if (!pass || pass.length < 6) { errEl.textContent = 'Password must be at least 6 characters.'; errEl.classList.add('show'); return; }
+  if (pass !== confirm) { errEl.textContent = 'Passwords do not match.'; errEl.classList.add('show'); return; }
+  const btn = document.getElementById('rp-btn');
+  btn.textContent = 'Saving…'; btn.disabled = true;
+  try {
+    const res = await fetch(SUPA_URL + '/auth/v1/user', {
+      method: 'PUT',
+      headers: {
+        'Content-Type': 'application/json',
+        'apikey': SUPA_ANON,
+        'Authorization': 'Bearer ' + session.access_token,
+      },
+      body: JSON.stringify({ password: pass }),
+    });
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.message || data.msg || 'Could not update password.');
+    // Success — clear recovery session, go to sign in
+    session = null;
+    ['cs_session','cs_profile'].forEach(k => localStorage.removeItem(k));
+    document.getElementById('reset-screen').style.display = 'none';
+    document.getElementById('auth-screen').classList.add('show');
+    setTab('signin');
+    showToast('Password updated — please sign in.');
+  } catch(e) {
+    errEl.textContent = e.message;
+    errEl.classList.add('show');
+  } finally {
+    btn.textContent = 'Save new password →'; btn.disabled = false;
+  }
 }
 
 // ── Profile routing ───────────────────────────────────────────────────────────
