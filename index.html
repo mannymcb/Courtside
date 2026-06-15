@@ -2052,23 +2052,33 @@ function filterPlayers(q) {
 function openPlayerProfile(id) {
   const p = clubPlayers.find(x => x.id === id);
   if (!p) return;
-  const ini = (p.full_name || '?').split(' ').map(w => w[0]).join('').slice(0, 2).toUpperCase();
-  const bg = p.avatar_color || 'var(--season-bg1)';
-  const fg = p.avatar_text_color || '#fff';
+  const pClubObj = allClubs.find(c => c.id === p.club_id);
+
+  const rowStyle = 'display:flex;align-items:baseline;justify-content:space-between;padding:9px 0;border-bottom:1px solid var(--border);';
+  const labelStyle = 'font-size:11px;font-weight:700;letter-spacing:.5px;text-transform:uppercase;color:var(--ink3);flex-shrink:0;margin-right:12px;';
+  const valueStyle = 'font-size:14px;font-weight:500;color:var(--ink);text-align:right;';
+
   const rows = [];
-  if (p.show_usta_rating && p.usta_rating) rows.push(`<div class="shrow"><span class="k">USTA</span><span class="v">${p.usta_rating}</span></div>`);
-  if (p.show_utr_rating && p.utr_rating) rows.push(`<div class="shrow"><span class="k">UTR</span><span class="v">${p.utr_rating}</span></div>`);
-  if (p.home_club) rows.push(`<div class="shrow"><span class="k">Club</span><span class="v">${p.home_club}</span></div>`);
-  if (p.show_tennis_record && p.tennis_record_url) rows.push(`<div class="shrow"><span class="k">TennisRecord</span><span class="v"><a href="${p.tennis_record_url}" target="_blank" rel="noopener noreferrer" style="color:var(--season-bg1);font-weight:600;">View profile →</a></span></div>`);
+  if (p.show_usta_rating && p.usta_rating)
+    rows.push(`<div style="${rowStyle}"><span style="${labelStyle}">USTA</span><span style="${valueStyle}">${p.usta_rating}</span></div>`);
+  if (p.show_utr_rating && p.utr_rating)
+    rows.push(`<div style="${rowStyle}"><span style="${labelStyle}">UTR</span><span style="${valueStyle}">${p.utr_rating}</span></div>`);
+  if (pClubObj)
+    rows.push(`<div style="${rowStyle}"><span style="${labelStyle}">Club</span><span style="${valueStyle}">${pClubObj.name}</span></div>`);
+  if (p.show_tennis_record && p.tennis_record_url)
+    rows.push(`<div style="${rowStyle}border-bottom:none;"><span style="${labelStyle}">Tennis Record</span><a href="${p.tennis_record_url}" target="_blank" rel="noopener noreferrer" style="font-size:14px;font-weight:600;color:var(--season-bg1);text-decoration:none;">View profile →</a></div>`);
 
   document.getElementById('prof-body').innerHTML = `
-    <div style="text-align:center;margin-bottom:18px;">
-      <div class="player-detail-av" style="background:${bg};color:${fg};">${ini}</div>
-      <div class="prof-name-display">${p.full_name || '—'}</div>
+    <div style="text-align:center;margin-bottom:16px;">
+      ${avatarEl(p, 'lg')}
+      <div class="prof-name-display" style="margin-top:10px;">${p.full_name || '—'}</div>
       ${p.username ? `<div class="prof-username">@${p.username}</div>` : ''}
     </div>
-    ${rows.join('')}
-    <button onclick="closeProfile()" style="width:100%;background:var(--page);border:1.5px solid var(--border);border-radius:var(--r);padding:11px;font-family:var(--font);font-size:13px;font-weight:600;cursor:pointer;color:var(--ink2);margin-top:14px;">Close</button>
+    ${rows.length
+      ? `<div style="margin-bottom:14px;">${rows.join('')}</div>`
+      : '<div style="font-size:13px;color:var(--ink3);text-align:center;padding:4px 0 14px;">No public information shared.</div>'
+    }
+    <button onclick="closeProfile()" style="width:100%;background:var(--page);border:1.5px solid var(--border);border-radius:var(--r);padding:11px;font-family:var(--font);font-size:13px;font-weight:600;cursor:pointer;color:var(--ink2);">Close</button>
   `;
   document.getElementById('prof-overlay').classList.add('on');
 }
