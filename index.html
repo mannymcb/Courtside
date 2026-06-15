@@ -982,7 +982,8 @@ function renderProfileError(msg) {
 function updateHero() {
   if (!profile) return;
   const name = profile.full_name || profile.name || '—';
-  const club = profile.home_club || profile.club || '';
+  const clubObj = allClubs.find(c => c.id === profile?.club_id);
+  const club = clubObj?.name || '';
   const username = profile.username || '';
   document.getElementById('hero-name').textContent = name;
   const parts = [];
@@ -1013,7 +1014,8 @@ function openProfile() {
   else { populateClubSelector(); populateVisToggles(); }
   const name = profile.full_name || '';
   const username = profile.username || '';
-  const club = profile.home_club || '';
+  const clubObj = allClubs.find(c => c.id === profile?.club_id);
+  const club = clubObj?.name || '';
   const usta = profile.usta_rating || '';
   const utr = profile.utr_rating || '';
   const tr = profile.tennis_record_url || '';
@@ -1057,7 +1059,6 @@ function openProfile() {
       <div style="font-size:11px;font-weight:700;letter-spacing:.6px;text-transform:uppercase;color:var(--ink3);margin-bottom:12px;">Edit profile</div>
       <div class="edit-field"><label>Full name</label><input id="ep-name" type="text" value="${name}"></div>
       <div class="edit-field"><label>Username</label><input id="ep-username" type="text" value="${username}" placeholder="@yourname"></div>
-      <div class="edit-field"><label>Home club</label><input id="ep-club" type="text" value="${club}" placeholder="e.g. Mercer Island CC"></div>
       <div class="edit-field"><label>USTA rating</label>
         <select id="ep-usta">
           <option value="">Not rated</option>
@@ -1126,7 +1127,7 @@ async function saveProfileEdits() {
   const updates = {
     full_name: name,
     username: document.getElementById('ep-username').value.trim().replace('@', '') || null,
-    home_club: selectedClub ? selectedClub.name : (document.getElementById('ep-club').value.trim() || null),
+    home_club: selectedClub?.name || null,
     club_id: clubIdVal || null,
     usta_rating: document.getElementById('ep-usta').value || null,
     utr_rating: document.getElementById('ep-utr').value.trim() || null,
@@ -1704,7 +1705,7 @@ async function renderClub() {
 
   // Club assigned — show directory
   const myClub = allClubs.find(c => c.id === clubId);
-  const clubName = myClub?.name || profile?.home_club || 'Your Club';
+  const clubName = myClub?.name || 'Your Club';
   const clubSub = [myClub?.city, myClub?.state].filter(Boolean).join(', ');
 
   el.innerHTML = `
