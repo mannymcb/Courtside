@@ -344,6 +344,34 @@ html, body { height: 100%; font-family: var(--font); background: var(--page); co
 .entry-detail-row strong { color: var(--ink2); }
 .entry-expand-hint { font-size: 11px; color: var(--ink4); margin-top: 4px; }
 
+/* ── Club ── */
+.club-header { background: linear-gradient(135deg, var(--season-bg1), var(--season-bg2)); border-radius: var(--r); padding: 16px 18px; margin-bottom: 12px; color: #fff; }
+.club-header-name { font-size: 18px; font-weight: 800; margin-bottom: 2px; }
+.club-header-sub { font-size: 12px; color: rgba(255,255,255,.7); }
+.club-search { width: 100%; font-family: var(--font); font-size: 15px; color: var(--ink); background: var(--surface); border: 1.5px solid var(--border); border-radius: var(--rsm); padding: 10px 14px; outline: none; margin-bottom: 12px; box-sizing: border-box; }
+.club-search:focus { border-color: var(--season-bg1); }
+.player-card { background: var(--surface); border-radius: var(--r); padding: 13px 15px; margin-bottom: 8px; display: flex; align-items: center; gap: 12px; box-shadow: var(--shadow); border: 1px solid var(--border); cursor: pointer; }
+.player-card:active { background: var(--page); }
+.player-av { width: 40px; height: 40px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 15px; font-weight: 800; color: #fff; flex-shrink: 0; }
+.player-name { font-size: 14px; font-weight: 700; color: var(--ink); }
+.player-meta { font-size: 12px; color: var(--ink3); margin-top: 2px; }
+.player-badge { font-size: 11px; font-weight: 600; background: var(--page); color: var(--ink3); border-radius: 8px; padding: 2px 7px; border: 1px solid var(--border); }
+.club-empty { text-align: center; padding: 40px 20px; color: var(--ink3); font-size: 13px; line-height: 1.6; }
+.club-empty-title { font-size: 15px; font-weight: 700; color: var(--ink2); margin-bottom: 6px; }
+
+/* ── Player detail sheet ── */
+.player-detail-av { width: 64px; height: 64px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 22px; font-weight: 800; color: #fff; margin: 0 auto 12px; }
+
+/* ── Visibility toggles ── */
+.vis-row { display: flex; align-items: center; justify-content: space-between; padding: 11px 0; border-bottom: 1px solid var(--border); }
+.vis-row:last-child { border-bottom: none; }
+.vis-toggle { width: 40px; height: 24px; border-radius: 12px; border: none; cursor: pointer; position: relative; transition: background .2s; flex-shrink: 0; }
+.vis-toggle span { position: absolute; top: 2px; width: 20px; height: 20px; border-radius: 50%; background: #fff; box-shadow: 0 1px 3px rgba(0,0,0,.2); transition: left .2s; }
+.vis-toggle.on { background: var(--season-bg1); }
+.vis-toggle.on span { left: 18px; }
+.vis-toggle.off { background: #ccc; }
+.vis-toggle.off span { left: 2px; }
+
 /* ── Toast ── */
 #toast { position: fixed; bottom: calc(env(safe-area-inset-bottom) + 80px); left: 50%; transform: translateX(-50%) translateY(10px); background: #1a1a1a; color: #fff; padding: 10px 20px; border-radius: 20px; font-size: 13px; font-weight: 600; opacity: 0; transition: all .25s; z-index: 999; white-space: nowrap; pointer-events: none; }
 #toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
@@ -475,7 +503,7 @@ html, body { height: 100%; font-family: var(--font); background: var(--page); co
       <button onclick="goPage('activity',document.getElementById('nb-activity'))" style="font-size:12px;font-weight:600;color:var(--season-bg1);background:none;border:none;cursor:pointer;font-family:var(--font);">View all →</button>
     </div>
     <div id="home-recent"></div>
-  </div>  </div>
+  </div>
 
   <div class="page" id="page-activity">
     <div class="chip-row">
@@ -489,11 +517,7 @@ html, body { height: 100%; font-family: var(--font); background: var(--page); co
 
 
   <div class="page" id="page-club">
-    <div class="coming-soon">
-      <div class="cs-icon" style="font-size:32px;margin-bottom:10px;">🏟️</div>
-      <div class="cs-title">Club features coming soon</div>
-      <div class="cs-sub">Connect with members at your club, share results, and form teams.</div>
-    </div>
+    <div id="club-content"></div>
   </div>
 
   <div class="page" id="page-improve">
@@ -970,6 +994,8 @@ function goPage(p, btn) {
 // ── Profile sheet ─────────────────────────────────────────────────────────────
 function openProfile() {
   if (!profile) return;
+  if (allClubs.length === 0) loadClubs().then(() => { populateClubSelector(); populateVisToggles(); });
+  else { populateClubSelector(); populateVisToggles(); }
   const name = profile.full_name || '';
   const username = profile.username || '';
   const club = profile.home_club || '';
@@ -1029,11 +1055,33 @@ function openProfile() {
       <div class="edit-field"><label>TennisRecord URL <span style="font-weight:400;color:var(--ink4);">(optional)</span></label>
         <input id="ep-tr" type="url" value="${tr}" placeholder="https://www.tennisrecord.com/...">
       </div>
-      <div class="edit-field"><label>Visibility</label>
-        <select id="ep-vis">
-          <option value="public" ${vis==='public'?'selected':''}>Public</option>
-          <option value="private" ${vis==='private'?'selected':''}>Private</option>
+      <div class="edit-field"><label>Club</label>
+        <select id="ep-club-id" style="width:100%;font-family:var(--font);font-size:15px;color:var(--ink);background:var(--page);border:1.5px solid var(--border);border-radius:var(--rsm);padding:10px 13px;outline:none;-webkit-appearance:none;">
+          <option value="">— No club selected —</option>
         </select>
+      </div>
+      <div style="margin-bottom:14px;">
+        <div style="font-size:10px;font-weight:700;letter-spacing:.6px;text-transform:uppercase;color:var(--ink3);margin-bottom:8px;">Community visibility</div>
+        <div class="vis-row">
+          <div><div style="font-size:13px;font-weight:600;color:var(--ink);">Visibility</div><div style="font-size:11px;color:var(--ink3);">Who can find you in Club</div></div>
+          <select id="ep-community-vis" style="font-family:var(--font);font-size:12px;color:var(--ink);background:var(--page);border:1px solid var(--border);border-radius:8px;padding:4px 8px;outline:none;-webkit-appearance:none;">
+            <option value="private">Private</option>
+            <option value="club">Club only</option>
+            <option value="public">Public</option>
+          </select>
+        </div>
+        <div class="vis-row">
+          <div><div style="font-size:13px;font-weight:600;color:var(--ink);">Show USTA rating</div></div>
+          <button type="button" id="tog-usta" class="vis-toggle off" onclick="toggleVis('tog-usta')"><span></span></button>
+        </div>
+        <div class="vis-row">
+          <div><div style="font-size:13px;font-weight:600;color:var(--ink);">Show UTR rating</div></div>
+          <button type="button" id="tog-utr" class="vis-toggle off" onclick="toggleVis('tog-utr')"><span></span></button>
+        </div>
+        <div class="vis-row">
+          <div><div style="font-size:13px;font-weight:600;color:var(--ink);">Show Tennis Record link</div></div>
+          <button type="button" id="tog-tr" class="vis-toggle off" onclick="toggleVis('tog-tr')"><span></span></button>
+        </div>
       </div>
       <div id="ep-err" style="color:#e74c3c;font-size:13px;margin-bottom:8px;display:none;"></div>
       <button class="save-btn" id="ep-save" onclick="saveProfileEdits()">Save changes</button>
@@ -1043,7 +1091,8 @@ function openProfile() {
     </div>
   `;
   document.getElementById('prof-overlay').classList.add('on');
-  updateSoundToggleUI();
+  populateClubSelector();
+  populateVisToggles();
 }
 
 function closeProfile() {
@@ -1057,14 +1106,21 @@ async function saveProfileEdits() {
     err.textContent = 'Name cannot be empty.'; err.style.display = 'block';
     return;
   }
+  const clubIdVal = document.getElementById('ep-club-id')?.value || null;
+  const selectedClub = allClubs.find(c => c.id === clubIdVal);
   const updates = {
     full_name: name,
     username: document.getElementById('ep-username').value.trim().replace('@', '') || null,
-    home_club: document.getElementById('ep-club').value.trim() || null,
+    home_club: selectedClub ? selectedClub.name : (document.getElementById('ep-club').value.trim() || null),
+    club_id: clubIdVal || null,
     usta_rating: document.getElementById('ep-usta').value || null,
     utr_rating: document.getElementById('ep-utr').value.trim() || null,
     tennis_record_url: document.getElementById('ep-tr').value.trim() || null,
-    profile_visibility: document.getElementById('ep-vis').value,
+    profile_visibility: document.getElementById('ep-vis')?.value || 'private',
+    community_visibility: document.getElementById('ep-community-vis')?.value || 'private',
+    show_usta_rating: getToggleVal('tog-usta'),
+    show_utr_rating: getToggleVal('tog-utr'),
+    show_tennis_record: getToggleVal('tog-tr'),
   };
   const btn = document.getElementById('ep-save');
   btn.textContent = 'Saving…'; btn.disabled = true;
@@ -1534,6 +1590,164 @@ function editPractice(id) {
   const cancelBtn = document.getElementById('p-cancel-btn');
   if (cancelBtn) cancelBtn.style.display = 'block';
   window.scrollTo(0, 0);
+}
+
+// ── Club ─────────────────────────────────────────────────────────────────────
+let allClubs = [];
+let clubPlayers = [];
+
+async function loadClubs() {
+  try {
+    const rows = await sbFetch('/rest/v1/clubs?order=name.asc&select=id,name,city,state');
+    allClubs = Array.isArray(rows) ? rows : [];
+    console.log('[Courtside] clubs loaded:', allClubs.length);
+  } catch(e) {
+    console.warn('[Courtside] clubs load failed:', e.message);
+    allClubs = [];
+  }
+}
+
+function populateClubSelector() {
+  const sel = document.getElementById('ep-club-id');
+  if (!sel) return;
+  const current = profile?.club_id || '';
+  sel.innerHTML = '<option value="">— No club selected —</option>' +
+    allClubs.map(c => `<option value="${c.id}" ${c.id === current ? 'selected' : ''}>${c.name}${c.city ? ' · ' + c.city : ''}</option>`).join('');
+}
+
+function populateVisToggles() {
+  setToggle('tog-usta', profile?.show_usta_rating);
+  setToggle('tog-utr', profile?.show_utr_rating);
+  setToggle('tog-tr', profile?.show_tennis_record);
+  const visEl = document.getElementById('ep-community-vis');
+  if (visEl) visEl.value = profile?.community_visibility || 'private';
+  // Also pre-populate ep-vis for backward compat
+  const epVis = document.getElementById('ep-vis');
+  if (epVis) epVis.value = profile?.profile_visibility || 'private';
+}
+
+function setToggle(id, val) {
+  const btn = document.getElementById(id);
+  if (!btn) return;
+  btn.classList.toggle('on', !!val);
+  btn.classList.toggle('off', !val);
+}
+
+function toggleVis(id) {
+  const btn = document.getElementById(id);
+  if (!btn) return;
+  const isOn = btn.classList.contains('on');
+  btn.classList.toggle('on', !isOn);
+  btn.classList.toggle('off', isOn);
+}
+
+function getToggleVal(id) {
+  const btn = document.getElementById(id);
+  return btn ? btn.classList.contains('on') : false;
+}
+
+async function renderClub() {
+  const el = document.getElementById('club-content');
+  if (!el) return;
+  const clubId = profile?.club_id;
+  const myVis = profile?.community_visibility;
+
+  if (!clubId) {
+    el.innerHTML = `
+      <div class="club-empty" style="padding:48px 20px;">
+        <div class="club-empty-title">Find your club</div>
+        <div style="margin-bottom:20px;">Add your club to find players and build your Courtside community.</div>
+        <button onclick="openProfile()" style="background:var(--season-bg1);color:#fff;border:none;border-radius:var(--r);padding:12px 24px;font-family:var(--font);font-size:14px;font-weight:700;cursor:pointer;">Choose club →</button>
+      </div>`;
+    return;
+  }
+
+  const myClub = allClubs.find(c => c.id === clubId);
+  const clubName = myClub?.name || profile?.home_club || 'Your Club';
+  const clubSub = [myClub?.city, myClub?.state].filter(Boolean).join(', ');
+
+  el.innerHTML = `
+    <div class="club-header">
+      <div class="club-header-name">${clubName}</div>
+      ${clubSub ? `<div class="club-header-sub">${clubSub}</div>` : ''}
+    </div>
+    <input type="search" class="club-search" id="club-search-input" placeholder="Search players…" oninput="filterPlayers(this.value)">
+    <div id="club-player-list"></div>`;
+
+  await loadClubPlayers(clubId);
+}
+
+async function loadClubPlayers(clubId) {
+  const el = document.getElementById('club-player-list');
+  if (!el) return;
+  el.innerHTML = '<div class="club-empty">Loading players…</div>';
+  try {
+    const rows = await sbFetch(`/rest/v1/profiles?club_id=eq.${clubId}&community_visibility=neq.private&id=neq.${profile.id}&select=id,full_name,username,home_club,usta_rating,utr_rating,tennis_record_url,avatar_color,avatar_text_color,show_usta_rating,show_utr_rating,show_tennis_record,community_visibility&order=full_name.asc`);
+    clubPlayers = Array.isArray(rows) ? rows.filter(p => p.community_visibility !== 'private') : [];
+    console.log('[Courtside] club players loaded:', clubPlayers.length);
+    renderPlayerList(clubPlayers);
+  } catch(e) {
+    console.warn('[Courtside] club players error:', e.message);
+    el.innerHTML = '<div class="club-empty">Could not load players. <button onclick="renderClub()" style="color:var(--season-bg1);background:none;border:none;cursor:pointer;font-family:var(--font);font-size:13px;font-weight:600;">Retry</button></div>';
+  }
+}
+
+function renderPlayerList(players) {
+  const el = document.getElementById('club-player-list');
+  if (!el) return;
+  if (!players.length) {
+    el.innerHTML = '<div class="club-empty">No other Courtside players are visible at your club yet.</div>';
+    return;
+  }
+  el.innerHTML = players.map(p => {
+    const ini = (p.full_name || '?').split(' ').map(w => w[0]).join('').slice(0, 2).toUpperCase();
+    const bg = p.avatar_color || 'var(--season-bg1)';
+    const fg = p.avatar_text_color || '#fff';
+    const meta = [];
+    if (p.show_usta_rating && p.usta_rating) meta.push('USTA ' + p.usta_rating);
+    if (p.show_utr_rating && p.utr_rating) meta.push('UTR ' + p.utr_rating);
+    return `<div class="player-card" onclick="openPlayerProfile('${p.id}')">
+      <div class="player-av" style="background:${bg};color:${fg};">${ini}</div>
+      <div style="flex:1;min-width:0;">
+        <div class="player-name">${p.full_name || '—'}</div>
+        <div class="player-meta">${meta.join(' · ') || '&nbsp;'}</div>
+      </div>
+      ${p.username ? `<div class="player-badge">@${p.username}</div>` : ''}
+    </div>`;
+  }).join('');
+}
+
+function filterPlayers(q) {
+  if (!q.trim()) { renderPlayerList(clubPlayers); return; }
+  const lq = q.toLowerCase();
+  renderPlayerList(clubPlayers.filter(p =>
+    (p.full_name || '').toLowerCase().includes(lq) ||
+    (p.username || '').toLowerCase().includes(lq)
+  ));
+}
+
+function openPlayerProfile(id) {
+  const p = clubPlayers.find(x => x.id === id);
+  if (!p) return;
+  const ini = (p.full_name || '?').split(' ').map(w => w[0]).join('').slice(0, 2).toUpperCase();
+  const bg = p.avatar_color || 'var(--season-bg1)';
+  const fg = p.avatar_text_color || '#fff';
+  const rows = [];
+  if (p.show_usta_rating && p.usta_rating) rows.push(`<div class="shrow"><span class="k">USTA</span><span class="v">${p.usta_rating}</span></div>`);
+  if (p.show_utr_rating && p.utr_rating) rows.push(`<div class="shrow"><span class="k">UTR</span><span class="v">${p.utr_rating}</span></div>`);
+  if (p.home_club) rows.push(`<div class="shrow"><span class="k">Club</span><span class="v">${p.home_club}</span></div>`);
+  if (p.show_tennis_record && p.tennis_record_url) rows.push(`<div class="shrow"><span class="k">TennisRecord</span><span class="v"><a href="${p.tennis_record_url}" target="_blank" rel="noopener noreferrer" style="color:var(--season-bg1);font-weight:600;">View profile →</a></span></div>`);
+
+  document.getElementById('prof-body').innerHTML = `
+    <div style="text-align:center;margin-bottom:18px;">
+      <div class="player-detail-av" style="background:${bg};color:${fg};">${ini}</div>
+      <div class="prof-name-display">${p.full_name || '—'}</div>
+      ${p.username ? `<div class="prof-username">@${p.username}</div>` : ''}
+    </div>
+    ${rows.join('')}
+    <button onclick="closeProfile()" style="width:100%;background:var(--page);border:1.5px solid var(--border);border-radius:var(--r);padding:11px;font-family:var(--font);font-size:13px;font-weight:600;cursor:pointer;color:var(--ink2);margin-top:14px;">Close</button>
+  `;
+  document.getElementById('prof-overlay').classList.add('on');
 }
 
 // ── Improvement resource map (v0.6 will link to real content) ────────────────
