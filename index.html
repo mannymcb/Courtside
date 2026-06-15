@@ -395,6 +395,35 @@ html, body { height: 100%; font-family: var(--font); background: var(--page); co
 .detail-value { font-size: 14px; font-weight: 500; color: var(--ink); }
 .detail-link { font-size: 14px; font-weight: 600; color: var(--season-bg1); text-decoration: none; }
 
+/* ── Club tabs ── */
+.club-tabs { display: flex; background: var(--surface); border-radius: var(--r); padding: 4px; margin-bottom: 14px; gap: 4px; border: 1px solid var(--border); }
+.club-tab { flex: 1; padding: 8px 4px; border: none; background: none; font-family: var(--font); font-size: 12px; font-weight: 600; color: var(--ink3); border-radius: var(--rsm); cursor: pointer; transition: all .15s; }
+.club-tab.on { background: var(--season-bg1); color: #fff; }
+
+/* ── Feed cards ── */
+.feed-card { display: flex; align-items: center; gap: 11px; padding: 11px 0; border-bottom: 1px solid var(--border); }
+.feed-card:last-child { border-bottom: none; }
+.feed-body { flex: 1; min-width: 0; }
+.feed-name { font-size: 13px; font-weight: 700; color: var(--ink); }
+.feed-summary { font-size: 12px; color: var(--ink2); margin-top: 1px; }
+.feed-score { font-size: 11px; color: var(--ink3); margin-top: 1px; }
+.feed-date { font-size: 11px; color: var(--ink4); flex-shrink: 0; }
+
+/* ── Friend action buttons ── */
+.friend-btn { font-size: 12px; font-weight: 600; border-radius: 20px; padding: 5px 13px; border: none; cursor: pointer; font-family: var(--font); white-space: nowrap; }
+.friend-btn.primary { background: var(--season-bg1); color: #fff; }
+.friend-btn.outline { background: none; border: 1.5px solid var(--border); color: var(--ink3); }
+.friend-btn.danger { background: none; border: 1.5px solid #e74c3c; color: #e74c3c; }
+.friend-btn.accept { background: #27ae60; color: #fff; }
+
+/* ── Friends list rows ── */
+.friend-row { display: flex; align-items: center; gap: 10px; padding: 10px 0; border-bottom: 1px solid var(--border); }
+.friend-row:last-child { border-bottom: none; }
+.friend-row-info { flex: 1; min-width: 0; }
+.friend-row-name { font-size: 14px; font-weight: 600; color: var(--ink); }
+.friend-row-meta { font-size: 11px; color: var(--ink3); margin-top: 1px; }
+.friend-section-label { font-size: 10px; font-weight: 700; letter-spacing: .6px; text-transform: uppercase; color: var(--ink3); margin: 14px 0 8px; }
+
 /* ── Toast ── */
 #toast { position: fixed; bottom: calc(env(safe-area-inset-bottom) + 80px); left: 50%; transform: translateX(-50%) translateY(10px); background: #1a1a1a; color: #fff; padding: 10px 20px; border-radius: 20px; font-size: 13px; font-weight: 600; opacity: 0; transition: all .25s; z-index: 999; white-space: nowrap; pointer-events: none; }
 #toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
@@ -1106,6 +1135,10 @@ async function saveSetup(uid) {
     showScreen('app-shell');
     updateHero();
     await loadAppData();
+    // Upsert default activity privacy
+    sbFetch('/rest/v1/activity_privacy', 'POST', {
+      user_id: uid, share_activity: true, share_result: true, share_score: false
+    }).catch(() => {});
     showToast('Welcome to Courtside! 🎾');
   } catch(err) {
     console.error('[Courtside] profile save error:', err.message);
@@ -1262,6 +1295,21 @@ function openProfile() {
           <button type="button" id="tog-tr" class="vis-toggle off" onclick="toggleVis('tog-tr')"><span></span></button>
         </div>
       </div>
+      <div style="margin-bottom:14px;">
+        <div style="font-size:10px;font-weight:700;letter-spacing:.6px;text-transform:uppercase;color:var(--ink3);margin-bottom:8px;">Activity sharing</div>
+        <div class="vis-row">
+          <div><div style="font-size:13px;font-weight:600;color:var(--ink);">Share activity with friends</div><div style="font-size:11px;color:var(--ink3);">Show matches and practices in friends' feed</div></div>
+          <button type="button" id="tog-share-activity" class="vis-toggle off" onclick="toggleVis('tog-share-activity')"><span></span></button>
+        </div>
+        <div class="vis-row">
+          <div><div style="font-size:13px;font-weight:600;color:var(--ink);">Share result</div><div style="font-size:11px;color:var(--ink3);">Show win or loss</div></div>
+          <button type="button" id="tog-share-result" class="vis-toggle off" onclick="toggleVis('tog-share-result')"><span></span></button>
+        </div>
+        <div class="vis-row">
+          <div><div style="font-size:13px;font-weight:600;color:var(--ink);">Share score</div><div style="font-size:11px;color:var(--ink3);">Show score in friends' feed</div></div>
+          <button type="button" id="tog-share-score" class="vis-toggle off" onclick="toggleVis('tog-share-score')"><span></span></button>
+        </div>
+      </div>
       <div id="ep-err" style="color:#e74c3c;font-size:13px;margin-bottom:8px;display:none;"></div>
       <button class="save-btn" id="ep-save" onclick="saveProfileEdits()">Save changes</button>
 
@@ -1387,6 +1435,19 @@ async function saveProfileEdits() {
     show_utr_rating: getToggleVal('tog-utr'),
     show_tennis_record: getToggleVal('tog-tr'),
   };
+  // Save activity privacy
+  const ap = {
+    user_id: profile.id,
+    share_activity: getToggleVal('tog-share-activity'),
+    share_result: getToggleVal('tog-share-result'),
+    share_score: getToggleVal('tog-share-score'),
+    updated_at: new Date().toISOString(),
+  };
+  sbFetch('/rest/v1/activity_privacy?user_id=eq.' + profile.id, 'PATCH', ap)
+    .catch(() => sbFetch('/rest/v1/activity_privacy', 'POST', ap))
+    .then(() => { activityPrivacy = ap; })
+    .catch(e => console.warn('[Courtside] activity privacy save:', e.message));
+
   const btn = document.getElementById('ep-save');
   btn.textContent = 'Saving…'; btn.disabled = true;
   try {
@@ -1860,6 +1921,9 @@ function editPractice(id) {
 // ── Club ─────────────────────────────────────────────────────────────────────
 let allClubs = [];
 let clubPlayers = [];
+let myFriendships = [];     // all my friendship rows
+let activityPrivacy = null; // my activity_privacy row
+let clubActiveTab = 'feed'; // 'feed' | 'directory' | 'friends'
 
 async function loadClubs() {
   try {
@@ -1886,9 +1950,12 @@ function populateVisToggles() {
   setToggle('tog-tr', profile?.show_tennis_record);
   const visEl = document.getElementById('ep-community-vis');
   if (visEl) visEl.value = profile?.community_visibility || 'private';
-  // Also pre-populate ep-vis for backward compat
   const epVis = document.getElementById('ep-vis');
   if (epVis) epVis.value = profile?.profile_visibility || 'private';
+  // Activity sharing
+  setToggle('tog-share-activity', activityPrivacy?.share_activity ?? true);
+  setToggle('tog-share-result', activityPrivacy?.share_result ?? true);
+  setToggle('tog-share-score', activityPrivacy?.share_score ?? false);
 }
 
 function setToggle(id, val) {
@@ -1914,26 +1981,18 @@ function getToggleVal(id) {
 async function renderClub() {
   const el = document.getElementById('club-content');
   if (!el) { console.warn('[Courtside] renderClub — club-content not found'); return; }
-
-  // Show loading immediately
   el.innerHTML = '<div class="club-empty">Loading…</div>';
 
-  // Ensure clubs are loaded
   if (allClubs.length === 0) {
-    try {
-      await loadClubs();
-    } catch(e) {
+    try { await loadClubs(); }
+    catch(e) {
       el.innerHTML = `<div class="club-empty"><div class="club-empty-title">Could not load clubs</div><div style="margin-bottom:16px;">${e.message}</div><button onclick="renderClub()" style="background:var(--season-bg1);color:#fff;border:none;border-radius:var(--r);padding:10px 20px;font-family:var(--font);font-size:13px;font-weight:600;cursor:pointer;">↻ Retry</button></div>`;
       return;
     }
   }
 
-  console.log('[Courtside] renderClub — profile.club_id:', profile?.club_id, '| allClubs:', allClubs.length);
-
-  // No club assigned
   const clubId = profile?.club_id;
   if (!clubId) {
-    // Build inline club selector
     const opts = allClubs.length
       ? allClubs.map(c => `<option value="${c.id}">${c.name}${c.city ? ' · ' + c.city : ''}</option>`).join('')
       : '<option value="" disabled>No clubs available yet</option>';
@@ -1952,7 +2011,6 @@ async function renderClub() {
     return;
   }
 
-  // Club assigned — show directory
   const myClub = allClubs.find(c => c.id === clubId);
   const clubName = myClub?.name || 'Your Club';
   const clubSub = [myClub?.city, myClub?.state].filter(Boolean).join(', ');
@@ -1962,10 +2020,186 @@ async function renderClub() {
       <div class="club-header-name">${clubName}</div>
       ${clubSub ? `<div class="club-header-sub">${clubSub}</div>` : ''}
     </div>
-    <input type="search" class="club-search" id="club-search-input" placeholder="Search players…" oninput="filterPlayers(this.value)">
-    <div id="club-player-list"><div class="club-empty">Loading players…</div></div>`;
+    <div class="club-tabs">
+      <button type="button" class="club-tab${clubActiveTab==='feed'?' on':''}" onclick="setClubTab('feed')">Feed</button>
+      <button type="button" class="club-tab${clubActiveTab==='directory'?' on':''}" onclick="setClubTab('directory')">Directory</button>
+      <button type="button" class="club-tab${clubActiveTab==='friends'?' on':''}" onclick="setClubTab('friends')">Friends</button>
+    </div>
+    <div id="club-tab-content"></div>`;
 
-  await loadClubPlayers(clubId);
+  await setClubTab(clubActiveTab, true);
+}
+
+async function setClubTab(tab, skipRender = false) {
+  clubActiveTab = tab;
+  // Update tab button states
+  document.querySelectorAll('.club-tab').forEach(b => {
+    b.classList.toggle('on', b.textContent.toLowerCase() === tab);
+  });
+  const el = document.getElementById('club-tab-content');
+  if (!el) return;
+  if (tab === 'feed') await renderFeed(el);
+  else if (tab === 'directory') await renderDirectory(el);
+  else if (tab === 'friends') await renderFriends(el);
+}
+
+// ── Feed ─────────────────────────────────────────────────────────────────────
+async function renderFeed(el) {
+  el.innerHTML = '<div class="club-empty">Loading feed…</div>';
+  try {
+    const res = await sbFetch('/rest/v1/rpc/get_friend_feed', 'POST', {});
+    const items = Array.isArray(res) ? res : [];
+    if (!items.length) {
+      el.innerHTML = '<div class="club-empty"><div class="club-empty-title">No activity yet</div><div>Add friends to see their activity here.</div></div>';
+      return;
+    }
+    el.innerHTML = items.map(item => {
+      const ini = (item.display_name || '?').split(' ').map(w => w[0]).join('').slice(0,2).toUpperCase();
+      const av = item.avatar_url
+        ? `<div style="width:34px;height:34px;border-radius:50%;overflow:hidden;flex-shrink:0;"><img src="${item.avatar_url}" style="width:100%;height:100%;object-fit:cover;" onerror="this.parentElement.innerHTML='<div style=&quot;width:34px;height:34px;border-radius:50%;background:var(--season-bg1);color:#fff;display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:800;&quot;>${ini}</div>'"></div>`
+        : `<div style="width:34px;height:34px;border-radius:50%;background:var(--season-bg1);color:#fff;display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:800;flex-shrink:0;">${ini}</div>`;
+      const scoreText = item.score ? `<div class="feed-score">${formatScore({score: item.score})}</div>` : '';
+      const dateStr = item.activity_date ? formatDate(item.activity_date) : '';
+      return `<div class="feed-card">
+        ${av}
+        <div class="feed-body">
+          <div class="feed-name">${item.display_name || '—'}</div>
+          <div class="feed-summary">${item.summary || (item.activity_type === 'match' ? 'logged a match' : 'logged a practice')}</div>
+          ${scoreText}
+        </div>
+        <div class="feed-date">${dateStr}</div>
+      </div>`;
+    }).join('');
+  } catch(e) {
+    el.innerHTML = `<div class="club-empty" style="color:#e74c3c;">Could not load feed: ${e.message}<br><button onclick="setClubTab('feed')" style="margin-top:10px;background:var(--season-bg1);color:#fff;border:none;border-radius:var(--r);padding:8px 16px;font-family:var(--font);font-size:12px;font-weight:600;cursor:pointer;">↻ Retry</button></div>`;
+  }
+}
+
+// ── Directory ─────────────────────────────────────────────────────────────────
+async function renderDirectory(el) {
+  el.innerHTML = `<input type="search" class="club-search" id="club-search-input" placeholder="Search players…" oninput="filterPlayers(this.value)"><div id="club-player-list"><div class="club-empty">Loading players…</div></div>`;
+  const clubId = profile?.club_id;
+  if (clubId) await loadClubPlayers(clubId);
+}
+
+// ── Friends ───────────────────────────────────────────────────────────────────
+async function renderFriends(el) {
+  await loadFriendships();
+  const myId = profile.id;
+
+  const pending = myFriendships.filter(f => f.status === 'pending' && f.requester_id !== myId);
+  const accepted = myFriendships.filter(f => f.status === 'accepted');
+  const sent = myFriendships.filter(f => f.status === 'pending' && f.requester_id === myId);
+
+  // Load names for friend rows
+  const friendIds = [...new Set([
+    ...pending.map(f => f.requester_id),
+    ...accepted.map(f => f.user_a === myId ? f.user_b : f.user_a),
+    ...sent.map(f => f.user_a === myId ? f.user_b : f.user_a),
+  ])];
+
+  let friendProfiles = {};
+  if (friendIds.length) {
+    try {
+      const rows = await sbFetch('/rest/v1/profiles?id=in.(' + friendIds.join(',') + ')&select=id,full_name,avatar_url,avatar_color,avatar_text_color,usta_rating,show_usta_rating');
+      (Array.isArray(rows) ? rows : []).forEach(p => { friendProfiles[p.id] = p; });
+    } catch(e) { console.warn('[Courtside] friend profiles load:', e.message); }
+  }
+
+  function friendRow(f, otherId, actions) {
+    const p = friendProfiles[otherId] || {};
+    const ini = (p.full_name || '?').split(' ').map(w => w[0]).join('').slice(0,2).toUpperCase();
+    const av = p.avatar_url
+      ? `<div style="width:34px;height:34px;border-radius:50%;overflow:hidden;flex-shrink:0;"><img src="${p.avatar_url}" style="width:100%;height:100%;object-fit:cover;"></div>`
+      : `<div style="width:34px;height:34px;border-radius:50%;background:${p.avatar_color||'var(--season-bg1)'};color:${p.avatar_text_color||'#fff'};display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:800;flex-shrink:0;">${ini}</div>`;
+    const meta = p.show_usta_rating && p.usta_rating ? `USTA ${p.usta_rating}` : '';
+    return `<div class="friend-row">
+      ${av}
+      <div class="friend-row-info">
+        <div class="friend-row-name">${p.full_name || '—'}</div>
+        ${meta ? `<div class="friend-row-meta">${meta}</div>` : ''}
+      </div>
+      <div style="display:flex;gap:6px;flex-shrink:0;">${actions}</div>
+    </div>`;
+  }
+
+  let html = '';
+
+  if (pending.length) {
+    html += `<div class="friend-section-label">Requests for you</div>`;
+    html += pending.map(f => friendRow(f, f.requester_id,
+      `<button class="friend-btn accept" onclick="friendAction('accept','${f.id}')">Accept</button>
+       <button class="friend-btn outline" onclick="friendAction('decline','${f.id}')">Decline</button>`
+    )).join('');
+  }
+
+  if (accepted.length) {
+    html += `<div class="friend-section-label">Friends</div>`;
+    html += accepted.map(f => {
+      const otherId = f.user_a === myId ? f.user_b : f.user_a;
+      return friendRow(f, otherId,
+        `<button class="friend-btn outline" onclick="friendAction('remove','${f.id}')">Remove</button>`
+      );
+    }).join('');
+  }
+
+  if (sent.length) {
+    html += `<div class="friend-section-label">Sent</div>`;
+    html += sent.map(f => {
+      const otherId = f.user_a === myId ? f.user_b : f.user_a;
+      return friendRow(f, otherId,
+        `<button class="friend-btn outline" onclick="friendAction('cancel','${f.id}')">Cancel</button>`
+      );
+    }).join('');
+  }
+
+  if (!pending.length && !accepted.length && !sent.length) {
+    html = '<div class="club-empty"><div class="club-empty-title">No friends yet</div><div>Find players in the Directory and tap Add friend.</div></div>';
+  }
+
+  el.innerHTML = html;
+}
+
+async function friendAction(action, friendshipId) {
+  const rpc = {
+    accept: 'accept_friend_request',
+    decline: 'decline_friend_request',
+    cancel: 'cancel_friend_request',
+    remove: 'remove_friend',
+  }[action];
+  if (!rpc) return;
+  try {
+    await sbFetch('/rest/v1/rpc/' + rpc, 'POST', { friendship_id: friendshipId });
+    await loadFriendships();
+    const el = document.getElementById('club-tab-content');
+    if (el) await renderFriends(el);
+    showToast(action === 'accept' ? 'Friend added ✓' : action === 'remove' ? 'Removed' : 'Done');
+  } catch(e) {
+    showToast(e.message || 'Could not complete action');
+  }
+}
+
+async function sendFriendRequest(addresseeId) {
+  try {
+    await sbFetch('/rest/v1/rpc/send_friend_request', 'POST', { addressee_id: addresseeId });
+    await loadFriendships();
+    showToast('Friend request sent ✓');
+    // Re-render directory to update button state
+    const el = document.getElementById('club-tab-content');
+    if (el && clubActiveTab === 'directory') await renderDirectory(el);
+  } catch(e) {
+    showToast(e.message || 'Could not send request');
+  }
+}
+
+function friendshipStatus(otherId) {
+  const myId = profile.id;
+  const f = myFriendships.find(x =>
+    (x.user_a === myId && x.user_b === otherId) ||
+    (x.user_b === myId && x.user_a === otherId)
+  );
+  if (!f) return null;
+  return { status: f.status, id: f.id, iRequested: f.requester_id === myId };
 }
 
 async function saveClubFromInline() {
@@ -2029,13 +2263,24 @@ function renderPlayerList(players) {
     if (p.show_utr_rating && p.utr_rating) meta.push('UTR ' + p.utr_rating);
     const clubObj = allClubs.find(c => c.id === p.club_id);
     if (clubObj) meta.push(clubObj.name);
+    const fs = friendshipStatus(p.id);
+    let friendBtn = '';
+    if (!fs) {
+      friendBtn = `<button class="friend-btn primary" onclick="event.stopPropagation();sendFriendRequest('${p.id}')">Add</button>`;
+    } else if (fs.status === 'accepted') {
+      friendBtn = `<span style="font-size:11px;color:var(--ink3);font-weight:600;">Friends</span>`;
+    } else if (fs.status === 'pending' && fs.iRequested) {
+      friendBtn = `<span style="font-size:11px;color:var(--ink3);font-weight:600;">Pending</span>`;
+    } else if (fs.status === 'pending') {
+      friendBtn = `<button class="friend-btn accept" onclick="event.stopPropagation();friendAction('accept','${fs.id}')">Accept</button>`;
+    }
     return `<div class="player-row" onclick="openPlayerProfile('${p.id}')">
       ${avatarEl(p, 'sm')}
       <div style="flex:1;min-width:0;">
         <div class="player-row-name">${p.full_name || '—'}</div>
         ${meta.length ? `<div class="player-row-meta">${meta.join(' · ')}</div>` : ''}
       </div>
-      <span class="player-row-chevron">›</span>
+      ${friendBtn}
     </div>`;
   }).join('');
 }
@@ -2665,7 +2910,7 @@ async function initializeApp() {
 
   // Step 5: Load all app data (matches, practices, insights)
   hideLoading();
-  await loadAppData();
+  await Promise.all([loadAppData(), loadActivityPrivacy().catch(()=>{}), loadFriendships().catch(()=>{})]);
   console.log('[Courtside] initializeApp complete');
 }
 
