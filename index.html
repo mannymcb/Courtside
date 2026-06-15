@@ -437,21 +437,21 @@ html, body { height: 100%; font-family: var(--font); background: var(--page); co
   <!-- HERO -->
   <div class="hero">
     <svg class="hero-court" viewBox="0 0 460 114" preserveAspectRatio="none" xmlns="http://www.w3.org/2000/svg">
-      <!-- Doubles sidelines — outer boundary -->
+      <!-- Outer court: baselines (left/right) + doubles sidelines (top/bottom) -->
       <rect x="24" y="6" width="412" height="102" fill="none" stroke="rgba(255,255,255,.13)" stroke-width="1.5"/>
-      <!-- Singles sidelines — baseline to baseline -->
-      <line x1="75" y1="6" x2="75" y2="108" stroke="rgba(255,255,255,.1)" stroke-width="1.2"/>
-      <line x1="385" y1="6" x2="385" y2="108" stroke="rgba(255,255,255,.1)" stroke-width="1.2"/>
-      <!-- Net — between singles sidelines only -->
-      <line x1="75" y1="57" x2="385" y2="57" stroke="rgba(255,255,255,.18)" stroke-width="1.5"/>
+      <!-- Singles sidelines: inner horizontal lines, full baseline to baseline -->
+      <line x1="24" y1="30" x2="436" y2="30" stroke="rgba(255,255,255,.1)" stroke-width="1.2"/>
+      <line x1="24" y1="84" x2="436" y2="84" stroke="rgba(255,255,255,.1)" stroke-width="1.2"/>
+      <!-- Net: vertical center line, spanning doubles sidelines -->
+      <line x1="230" y1="6" x2="230" y2="108" stroke="rgba(255,255,255,.18)" stroke-width="1.5"/>
       <!-- Net post markers at doubles sidelines -->
-      <line x1="24" y1="51" x2="24" y2="63" stroke="rgba(255,255,255,.16)" stroke-width="1.5"/>
-      <line x1="436" y1="51" x2="436" y2="63" stroke="rgba(255,255,255,.16)" stroke-width="1.5"/>
-      <!-- Service lines — between singles sidelines -->
-      <line x1="75" y1="30" x2="385" y2="30" stroke="rgba(255,255,255,.08)" stroke-width="1"/>
-      <line x1="75" y1="84" x2="385" y2="84" stroke="rgba(255,255,255,.08)" stroke-width="1"/>
-      <!-- Center service line — between service lines only, not to baselines -->
-      <line x1="230" y1="30" x2="230" y2="84" stroke="rgba(255,255,255,.08)" stroke-width="1"/>
+      <line x1="224" y1="6" x2="236" y2="6" stroke="rgba(255,255,255,.16)" stroke-width="1.5"/>
+      <line x1="224" y1="108" x2="236" y2="108" stroke="rgba(255,255,255,.16)" stroke-width="1.5"/>
+      <!-- Service lines: vertical, stopping at singles sidelines only -->
+      <line x1="128" y1="30" x2="128" y2="84" stroke="rgba(255,255,255,.08)" stroke-width="1"/>
+      <line x1="332" y1="30" x2="332" y2="84" stroke="rgba(255,255,255,.08)" stroke-width="1"/>
+      <!-- Center service line: horizontal, between service lines, centered between singles sidelines -->
+      <line x1="128" y1="57" x2="332" y2="57" stroke="rgba(255,255,255,.08)" stroke-width="1"/>
     </svg>
     <div class="hero-top">
       <div>
