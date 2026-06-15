@@ -987,7 +987,9 @@ function goPage(p, btn) {
   window.scrollTo(0, 0);
   if (p === 'improve') {
     renderImprove();
-    console.log('[Courtside] goPage improve — allEntries length:', allEntries.length);
+  }
+  if (p === 'club') {
+    renderClub().catch(e => console.error('[Courtside] renderClub error:', e.message));
   }
 }
 
@@ -1648,20 +1650,46 @@ function getToggleVal(id) {
 
 async function renderClub() {
   const el = document.getElementById('club-content');
-  if (!el) return;
-  const clubId = profile?.club_id;
-  const myVis = profile?.community_visibility;
+  if (!el) { console.warn('[Courtside] renderClub — club-content not found'); return; }
 
+  // Show loading immediately
+  el.innerHTML = '<div class="club-empty">Loading…</div>';
+
+  // Ensure clubs are loaded
+  if (allClubs.length === 0) {
+    try {
+      await loadClubs();
+    } catch(e) {
+      el.innerHTML = `<div class="club-empty"><div class="club-empty-title">Could not load clubs</div><div style="margin-bottom:16px;">${e.message}</div><button onclick="renderClub()" style="background:var(--season-bg1);color:#fff;border:none;border-radius:var(--r);padding:10px 20px;font-family:var(--font);font-size:13px;font-weight:600;cursor:pointer;">↻ Retry</button></div>`;
+      return;
+    }
+  }
+
+  console.log('[Courtside] renderClub — profile.club_id:', profile?.club_id, '| allClubs:', allClubs.length);
+
+  // No club assigned
+  const clubId = profile?.club_id;
   if (!clubId) {
+    // Build inline club selector
+    const opts = allClubs.length
+      ? allClubs.map(c => `<option value="${c.id}">${c.name}${c.city ? ' · ' + c.city : ''}</option>`).join('')
+      : '<option value="" disabled>No clubs available yet</option>';
     el.innerHTML = `
-      <div class="club-empty" style="padding:48px 20px;">
+      <div class="club-empty" style="padding:32px 20px;">
         <div class="club-empty-title">Find your club</div>
-        <div style="margin-bottom:20px;">Add your club to find players and build your Courtside community.</div>
-        <button onclick="openProfile()" style="background:var(--season-bg1);color:#fff;border:none;border-radius:var(--r);padding:12px 24px;font-family:var(--font);font-size:14px;font-weight:700;cursor:pointer;">Choose club →</button>
+        <div style="margin-bottom:20px;font-size:13px;">Add your club to find players and build your Courtside community.</div>
+        ${allClubs.length ? `
+          <select id="inline-club-sel" style="width:100%;font-family:var(--font);font-size:15px;color:var(--ink);background:var(--surface);border:1.5px solid var(--border);border-radius:var(--rsm);padding:10px 13px;outline:none;-webkit-appearance:none;margin-bottom:12px;">
+            <option value="">— Select your club —</option>
+            ${opts}
+          </select>
+          <button onclick="saveClubFromInline()" style="width:100%;background:var(--season-bg1);color:#fff;border:none;border-radius:var(--r);padding:13px;font-family:var(--font);font-size:14px;font-weight:700;cursor:pointer;">Save club</button>
+        ` : `<div style="font-size:13px;color:var(--ink3);">No clubs available yet.</div>`}
       </div>`;
     return;
   }
 
+  // Club assigned — show directory
   const myClub = allClubs.find(c => c.id === clubId);
   const clubName = myClub?.name || profile?.home_club || 'Your Club';
   const clubSub = [myClub?.city, myClub?.state].filter(Boolean).join(', ');
@@ -1672,9 +1700,30 @@ async function renderClub() {
       ${clubSub ? `<div class="club-header-sub">${clubSub}</div>` : ''}
     </div>
     <input type="search" class="club-search" id="club-search-input" placeholder="Search players…" oninput="filterPlayers(this.value)">
-    <div id="club-player-list"></div>`;
+    <div id="club-player-list"><div class="club-empty">Loading players…</div></div>`;
 
   await loadClubPlayers(clubId);
+}
+
+async function saveClubFromInline() {
+  const sel = document.getElementById('inline-club-sel');
+  if (!sel || !sel.value) { showToast('Please select a club'); return; }
+  const clubId = sel.value;
+  const club = allClubs.find(c => c.id === clubId);
+  try {
+    await sbFetch(`/rest/v1/profiles?id=eq.${profile.id}`, 'PATCH', {
+      club_id: clubId,
+      home_club: club?.name || null,
+    });
+    profile.club_id = clubId;
+    profile.home_club = club?.name || profile.home_club;
+    store('cs_profile', profile);
+    updateHero();
+    await renderClub();
+    showToast('Club saved ✓');
+  } catch(e) {
+    showToast('Could not save club: ' + e.message);
+  }
 }
 
 async function loadClubPlayers(clubId) {
@@ -1687,8 +1736,8 @@ async function loadClubPlayers(clubId) {
     console.log('[Courtside] club players loaded:', clubPlayers.length);
     renderPlayerList(clubPlayers);
   } catch(e) {
-    console.warn('[Courtside] club players error:', e.message);
-    el.innerHTML = '<div class="club-empty">Could not load players. <button onclick="renderClub()" style="color:var(--season-bg1);background:none;border:none;cursor:pointer;font-family:var(--font);font-size:13px;font-weight:600;">Retry</button></div>';
+    console.error('[Courtside] club players error:', e.message);
+    el.innerHTML = `<div class="club-empty"><div style="color:#e74c3c;margin-bottom:12px;font-size:13px;">Could not load players: ${e.message}</div><button onclick="renderClub()" style="background:var(--season-bg1);color:#fff;border:none;border-radius:var(--r);padding:10px 20px;font-family:var(--font);font-size:13px;font-weight:600;cursor:pointer;">↻ Retry</button></div>`;
   }
 }
 
