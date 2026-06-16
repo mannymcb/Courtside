@@ -2420,7 +2420,16 @@ async function renderFriends(el) {
   }
 
   if (!pending.length && !accepted.length && !sent.length) {
-    html = '<div class="club-empty"><div class="club-empty-title">No friends yet</div><div>Find players in the Directory and tap Add friend.</div></div>';
+    html = `<div class="club-empty" style="padding:32px 16px 20px;">
+      <div class="club-empty-title">No friends yet</div>
+      <div style="font-size:13px;color:var(--ink3);margin-bottom:16px;">Browse the club directory to find players and send friend requests.</div>
+      <button onclick="setClubTab('directory')" style="background:var(--season-bg1);color:#fff;border:none;border-radius:var(--r);padding:11px 22px;font-family:var(--font);font-size:13px;font-weight:700;cursor:pointer;">Browse directory</button>
+    </div>`;
+  } else {
+    // Add a subtle "find more players" link at the bottom
+    html += `<div style="text-align:center;padding:14px 0 4px;">
+      <button onclick="setClubTab('directory')" style="font-size:12px;font-weight:600;color:var(--season-bg1);background:none;border:none;cursor:pointer;font-family:var(--font);">Find more players →</button>
+    </div>`;
   }
 
   el.innerHTML = html;
@@ -2570,16 +2579,20 @@ function renderPlayerList(players) {
     if (p.show_utr_rating && p.utr_rating) meta.push('UTR ' + p.utr_rating);
     const clubObj = allClubs.find(c => c.id === p.club_id);
     if (clubObj) meta.push(clubObj.name);
-    const fs = friendshipStatus(p.id);
+    // Skip self
+    const isSelf = p.id === profile?.id;
     let friendBtn = '';
-    if (!fs) {
-      friendBtn = `<button class="friend-btn primary" onclick="event.stopPropagation();sendFriendRequest('${p.id}')">Add</button>`;
-    } else if (fs.status === 'accepted') {
-      friendBtn = `<span style="font-size:11px;color:var(--ink3);font-weight:600;">Friends</span>`;
-    } else if (fs.status === 'pending' && fs.iRequested) {
-      friendBtn = `<span style="font-size:11px;color:var(--ink3);font-weight:600;">Pending</span>`;
-    } else if (fs.status === 'pending') {
-      friendBtn = `<button class="friend-btn accept" onclick="event.stopPropagation();friendAction('accept','${fs.id}')">Accept</button>`;
+    if (!isSelf) {
+      const fs = friendshipStatus(p.id);
+      if (!fs) {
+        friendBtn = `<button class="friend-btn primary" onclick="event.stopPropagation();sendFriendRequest('${p.id}')">Add</button>`;
+      } else if (fs.status === 'accepted') {
+        friendBtn = `<span style="font-size:11px;color:var(--ink3);font-weight:600;padding:5px 4px;">Friends</span>`;
+      } else if (fs.status === 'pending' && fs.iRequested) {
+        friendBtn = `<button class="friend-btn outline" onclick="event.stopPropagation();friendAction('cancel','${fs.id}')">Pending</button>`;
+      } else if (fs.status === 'pending') {
+        friendBtn = `<button class="friend-btn accept" onclick="event.stopPropagation();friendAction('accept','${fs.id}')">Accept</button>`;
+      }
     }
     return `<div class="player-row" onclick="openPlayerProfile('${p.id}')">
       ${avatarEl(p, 'sm')}
@@ -2683,8 +2696,9 @@ function buildPlayerCardHtml(p, activityItems) {
       ${activitySection}
       ${noPublicInfo ? `<div style="font-size:13px;color:var(--ink3);text-align:center;padding:16px 0;">No public information shared.</div>` : ''}
       ${friendAction ? `<div class="player-card-friend-row">${friendAction}</div>` : ''}
-      <button onclick="closeProfile()" style="width:100%;background:var(--page);border:1.5px solid var(--border);border-radius:var(--r);padding:11px;font-family:var(--font);font-size:13px;font-weight:600;cursor:pointer;color:var(--ink2);margin-top:8px;">Close</button>
-    </div>`;
+      <button disabled style="width:100%;background:var(--page);border:1.5px solid var(--border);border-radius:var(--r);padding:10px;font-family:var(--font);font-size:12px;font-weight:500;color:var(--ink4);margin-top:6px;cursor:default;opacity:.6;">Invite to hit — coming soon</button>
+      <button onclick="closeProfile()" style="width:100%;background:var(--page);border:1.5px solid var(--border);border-radius:var(--r);padding:11px;font-family:var(--font);font-size:13px;font-weight:600;cursor:pointer;color:var(--ink2);margin-top:6px;">Close</button>
+    </div>\``;
 }
 
 async function openPlayerProfile(id) {
