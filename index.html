@@ -414,10 +414,10 @@ html, body { height: 100%; font-family: var(--font); background: var(--page); co
 .feed-card { display: flex; align-items: flex-start; gap: 10px; padding: 10px 0; border-bottom: 1px solid var(--border); }
 .feed-card:last-child { border-bottom: none; }
 .feed-av-wrap { position: relative; flex-shrink: 0; }
-.feed-badge { position: absolute; bottom: -2px; right: -2px; width: 16px; height: 16px; border-radius: 50%; border: 2px solid var(--surface); display: flex; align-items: center; justify-content: center; font-size: 8px; }
-.feed-badge.win  { background: #27ae60; }
-.feed-badge.loss { background: var(--season-bg1); }
-.feed-badge.prac { background: #5b8fd4; }
+.feed-badge { position: absolute; bottom: -2px; right: -2px; width: 18px; height: 18px; border-radius: 50%; border: 2px solid var(--surface); display: flex; align-items: center; justify-content: center; font-size: 9px; line-height: 1; }
+.feed-badge.win  { background: #27ae60; color: #fff; }
+.feed-badge.match { background: var(--season-bg1); color: #fff; }
+.feed-badge.prac { background: #5b8fd4; color: #fff; }
 .feed-body { flex: 1; min-width: 0; padding-top: 1px; }
 .feed-name { font-size: 13px; font-weight: 700; color: var(--ink); line-height: 1.3; }
 .feed-summary { font-size: 12px; color: var(--ink2); margin-top: 1px; line-height: 1.4; }
@@ -2109,53 +2109,57 @@ function feedSummaryType(item) {
   return 'played';
 }
 
-function feedBadgeCls(type) {
-  if (type === 'won')      return 'win';
-  if (type === 'practice') return 'prac';
-  return 'loss';
+function feedCounts(items) {
+  const c = { won: 0, played: 0, practice: 0 };
+  items.forEach(it => { c[feedSummaryType(it)]++; });
+  return c;
 }
 
-function feedPrimary(items, periodLabel) {
-  // Calm, contextual headline for the card
-  const total = items.length;
-  const latestDate = items[0]?.activity_date;
-  const latestType = feedSummaryType(items[0]);
-  if (periodLabel === 'Today') {
-    if (latestType === 'practice') return 'Practiced today';
-    return 'Played today';
-  }
-  if (periodLabel === 'Yesterday') {
-    if (latestType === 'practice') return 'Practiced yesterday';
-    return 'Played yesterday';
-  }
-  if (total >= 8) return 'Active recently';
-  if (periodLabel === 'This week') return 'Active this week';
-  return 'Back on court';
+function feedBadge(counts) {
+  // Badge reflects match activity first; practice only if no matches
+  const hasMatch = counts.won + counts.played > 0;
+  if (counts.won > 0) return { cls: 'win',   icon: '🏆' };
+  if (hasMatch)       return { cls: 'match',  icon: '🎾' };
+  return               { cls: 'prac',  icon: '◉'  };
 }
 
-function feedStats(items) {
-  // Supporting stat line: "7 wins · 6 practices" style
-  const byType = { won: 0, played: 0, practice: 0 };
-  items.forEach(it => { byType[feedSummaryType(it)]++; });
+function feedPrimary(counts, periodLabel) {
+  // Match wins take priority; practice only if no matches
+  const matches = counts.won + counts.played;
+  if (counts.won > 0 && counts.played === 0) {
+    return counts.won === 1 ? 'Won a match' : `Won ${counts.won} matches`;
+  }
+  if (counts.won > 0) {
+    return counts.won === 1 ? 'Won a match' : `Won ${counts.won} matches`;
+  }
+  if (matches > 0) {
+    return matches === 1 ? 'Played a match' : `Played ${matches} matches`;
+  }
+  // Practice only
+  if (periodLabel === 'Today' || periodLabel === 'Yesterday') {
+    return periodLabel === 'Today' ? 'Practiced today' : 'Practiced yesterday';
+  }
+  return 'Active recently';
+}
+
+function feedStats(counts) {
+  // Supporting line — demotes practice to secondary
+  const matches = counts.won + counts.played;
   const parts = [];
-  const matches = byType.won + byType.played;
-  if (byType.won > 0 && byType.played === 0) {
-    parts.push(byType.won === 1 ? '1 win' : `${byType.won} wins`);
-  } else if (matches > 0) {
-    parts.push(matches === 1 ? '1 match' : `${matches} matches`);
+  if (counts.won > 0 && matches > counts.won) {
+    // Mixed: show wins + total
+    parts.push(counts.won === 1 ? '1 win' : `${counts.won} wins`);
   }
-  if (byType.practice > 0) {
-    parts.push(byType.practice === 1 ? '1 practice' : `${byType.practice} practices`);
+  if (counts.practice > 0 && matches > 0) {
+    parts.push(counts.practice === 1 ? '1 practice' : `${counts.practice} practices`);
   }
   return parts.join(' · ');
 }
 
 function feedPeriodLabel(items) {
-  // Accurate period based on actual activity dates
   const dates = [...new Set(items.map(it => it.activity_date).filter(Boolean))];
   if (dates.length === 0) return '';
   if (dates.length === 1) return feedDateLabel(dates[0]);
-  // Multiple dates — find oldest
   const sorted = dates.slice().sort();
   const oldest = sorted[0];
   const now = new Date();
@@ -2182,8 +2186,8 @@ function feedExpandedRows(friendItems) {
     html += `<div style="font-size:10px;font-weight:700;letter-spacing:.5px;text-transform:uppercase;color:var(--ink4);padding:8px 0 4px;">${key}</div>`;
     sections[key].forEach(it => {
       const type = feedSummaryType(it);
-      const badgeCls = feedBadgeCls(type);
-      const icon = type === 'won' ? '✓' : '●';
+      const badgeCls = type === 'won' ? 'win' : type === 'practice' ? 'prac' : 'match';
+      const icon = type === 'won' ? '🏆' : type === 'practice' ? '◉' : '🎾';
       const summary = type === 'won' ? 'Won a match' : type === 'practice' ? 'Had a practice' : 'Played a match';
       const scoreHtml = it.score ? `<span class="feed-score" style="margin-left:6px;">${formatScore({ score: it.score })}</span>` : '';
       html += `<div style="display:flex;align-items:center;gap:8px;padding:5px 0;border-bottom:1px solid var(--border);">
@@ -2226,11 +2230,10 @@ async function renderFeed(el) {
         const items = friendMap[fid];
         const latest = items[0];
         const period = feedPeriodLabel(items);
-        const primary = feedPrimary(items, period);
-        const stats = feedStats(items);
-        const topType = feedSummaryType(latest);
-        const badgeCls = feedBadgeCls(topType);
-        const badgeIcon = topType === 'won' ? '✓' : '●';
+        const counts = feedCounts(items);
+        const primary = feedPrimary(counts, period);
+        const stats = feedStats(counts);
+        const badge = feedBadge(counts);
         const isOpen = feedExpandedId === fid;
         const expandedHtml = isOpen
           ? `<div style="border-top:1px solid var(--border);margin-top:8px;padding-top:2px;">${feedExpandedRows(items)}</div>`
@@ -2240,7 +2243,7 @@ async function renderFeed(el) {
           <div style="display:flex;align-items:center;gap:10px;width:100%;">
             <div class="feed-av-wrap" style="flex-shrink:0;">
               ${feedAvatarHtml(latest)}
-              <div class="feed-badge ${badgeCls}">${badgeIcon}</div>
+              <div class="feed-badge ${badge.cls}">${badge.icon}</div>
             </div>
             <div class="feed-body" style="flex:1;min-width:0;">
               <div class="feed-name">${latest.display_name || '—'}</div>
