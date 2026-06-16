@@ -2601,65 +2601,59 @@ function filterPlayers(q) {
   ));
 }
 
-function openPlayerProfile(id) {
-  const p = clubPlayers.find(x => x.id === id);
-  if (!p) return;
-  const pClubObj = allClubs.find(c => c.id === p.club_id);
-
-  // ── Avatar ────────────────────────────────────────────────────────────────
+function playerCardAvatarHtml(p) {
   const ini = (p.full_name || '?').split(' ').map(w => w[0]).join('').slice(0,2).toUpperCase();
   const avBg = p.avatar_color || 'rgba(255,255,255,0.25)';
   const avFg = p.avatar_text_color || '#fff';
-  const avHtml = p.avatar_url
-    ? `<div style="width:68px;height:68px;border-radius:50%;overflow:hidden;border:3px solid rgba(255,255,255,.4);margin:0 auto;">` +
+  if (p.avatar_url) {
+    return `<div style="width:72px;height:72px;border-radius:50%;overflow:hidden;border:3px solid rgba(255,255,255,.4);margin:0 auto;position:relative;">` +
       `<img src="${p.avatar_url}" style="width:100%;height:100%;object-fit:cover;display:block;" ` +
       `onerror="this.style.display='none';this.nextElementSibling.style.display='flex'">` +
-      `<div style="display:none;width:68px;height:68px;border-radius:50%;background:${avBg};color:${avFg};align-items:center;justify-content:center;font-size:22px;font-weight:800;">${ini}</div>` +
-      `</div>`
-    : `<div style="width:68px;height:68px;border-radius:50%;background:rgba(255,255,255,0.25);color:#fff;display:flex;align-items:center;justify-content:center;font-size:22px;font-weight:800;border:3px solid rgba(255,255,255,.4);margin:0 auto;">${ini}</div>`;
+      `<div style="display:none;width:72px;height:72px;border-radius:50%;background:${avBg};color:${avFg};align-items:center;justify-content:center;font-size:24px;font-weight:800;position:absolute;inset:0;">${ini}</div>` +
+      `</div>`;
+  }
+  return `<div style="width:72px;height:72px;border-radius:50%;background:rgba(255,255,255,0.22);color:#fff;display:flex;align-items:center;justify-content:center;font-size:24px;font-weight:800;border:3px solid rgba(255,255,255,.35);margin:0 auto;">${ini}</div>`;
+}
 
-  // ── Tennis details (respect visibility) ───────────────────────────────────
+function buildPlayerCardHtml(p, activityItems) {
+  const pClubObj = allClubs.find(c => c.id === p.club_id);
+
+  // ── Tennis details ────────────────────────────────────────────────────────
   const detailRows = [];
   if (p.show_usta_rating && p.usta_rating)
-    detailRows.push(['USTA', p.usta_rating]);
+    detailRows.push(`<div class="player-card-row"><span class="player-card-row-label">USTA</span><span class="player-card-row-value">${p.usta_rating}</span></div>`);
   if (p.show_utr_rating && p.utr_rating)
-    detailRows.push(['UTR', p.utr_rating]);
+    detailRows.push(`<div class="player-card-row"><span class="player-card-row-label">UTR</span><span class="player-card-row-value">${p.utr_rating}</span></div>`);
+  if (p.show_tennis_record && p.tennis_record_url)
+    detailRows.push(`<div class="player-card-row"><span class="player-card-row-label">Tennis Record</span><a href="${p.tennis_record_url}" target="_blank" rel="noopener noreferrer" style="font-size:13px;font-weight:600;color:var(--season-bg1);text-decoration:none;">View profile ›</a></div>`);
+  const detailHtml = detailRows.length ? `<div class="player-card-section">${detailRows.join('')}</div>` : '';
 
-  const detailHtml = detailRows.length
-    ? detailRows.map(([lbl, val]) =>
-        `<div class="player-card-row"><span class="player-card-row-label">${lbl}</span><span class="player-card-row-value">${val}</span></div>`
-      ).join('') +
-      (p.show_tennis_record && p.tennis_record_url
-        ? `<div class="player-card-row"><span class="player-card-row-label">Tennis Record</span><a href="${p.tennis_record_url}" target="_blank" rel="noopener noreferrer" style="font-size:13px;font-weight:600;color:var(--season-bg1);text-decoration:none;">View profile ›</a></div>`
-        : '')
-    : (p.show_tennis_record && p.tennis_record_url
-        ? `<div class="player-card-row"><span class="player-card-row-label">Tennis Record</span><a href="${p.tennis_record_url}" target="_blank" rel="noopener noreferrer" style="font-size:13px;font-weight:600;color:var(--season-bg1);text-decoration:none;">View profile ›</a></div>`
-        : '');
-
-  // ── Activity snapshot from feed data (friends only) ────────────────────────
-  // We have feed data in memory from renderFeed — use it if available
+  // ── Activity snapshot ────────────────────────────────────────────────────
   let activitySection = '';
-  const friendFeedItems = (typeof friendMap !== 'undefined' && friendMap[p.id]) ? friendMap[p.id] : [];
-  if (friendFeedItems.length) {
-    const fMatches = friendFeedItems.filter(x => x.activity_type === 'match');
-    const fPractices = friendFeedItems.filter(x => x.activity_type === 'practice');
-    const fWins = friendFeedItems.filter(x => (x.summary || '').toLowerCase().startsWith('won')).length;
-    const fMatchCount = fMatches.length;
-    const fPracCount = fPractices.length;
-    const lastDate = friendFeedItems[0]?.activity_date;
+  if (activityItems && activityItems.length) {
+    const fMatches   = activityItems.filter(x => x.activity_type === 'match');
+    const fPractices = activityItems.filter(x => x.activity_type === 'practice');
+    const fWins      = activityItems.filter(x => (x.summary||'').toLowerCase().startsWith('won')).length;
+    const fLosses    = fMatches.length - fWins;
+    const lastDate   = activityItems[0]?.activity_date;
+    const recordStr  = fMatches.length ? `${fWins}–${fLosses}` : null;
+    const lastStr    = lastDate ? feedDateLabel(lastDate) : null;
 
-    // Focus areas not available from feed RPC — omit
-    const statGrid = `<div class="player-card-stat-grid">
-      <div class="player-card-stat"><div class="player-card-stat-val">${fMatchCount}</div><div class="player-card-stat-lbl">Matches</div></div>
-      <div class="player-card-stat"><div class="player-card-stat-val">${fWins}</div><div class="player-card-stat-lbl">Wins</div></div>
-      <div class="player-card-stat"><div class="player-card-stat-val">${fPracCount}</div><div class="player-card-stat-lbl">Practices</div></div>
-    </div>`;
-    const lastPlayed = lastDate ? `<div style="font-size:11px;color:var(--ink3);margin-top:8px;text-align:right;">Last active ${feedDateLabel(lastDate).toLowerCase()}</div>` : '';
+    const rows = [];
+    if (lastStr)   rows.push(`<div class="player-card-row"><span class="player-card-row-label">Last played</span><span class="player-card-row-value">${lastStr}</span></div>`);
+    if (recordStr) rows.push(`<div class="player-card-row"><span class="player-card-row-label">Record</span><span class="player-card-row-value">${recordStr}</span></div>`);
+    if (fMatches.length) rows.push(`<div class="player-card-row"><span class="player-card-row-label">Matches</span><span class="player-card-row-value">${fMatches.length}</span></div>`);
+    if (fPractices.length) rows.push(`<div class="player-card-row"><span class="player-card-row-label">Practices</span><span class="player-card-row-value">${fPractices.length}</span></div>`);
 
-    activitySection = `<div class="player-card-section">
-      <div class="player-card-section-label">Recent activity</div>
-      ${statGrid}${lastPlayed}
-    </div>`;
+    if (rows.length) {
+      activitySection = `<div class="player-card-section">
+        <div class="player-card-section-label">Recent activity</div>
+        ${rows.join('')}
+      </div>`;
+    }
+  } else if (activityItems !== null) {
+    // activityItems was fetched but empty — show subtle empty state
+    activitySection = `<div class="player-card-section"><div style="font-size:12px;color:var(--ink3);">No shared activity yet.</div></div>`;
   }
 
   // ── Friend action ─────────────────────────────────────────────────────────
@@ -2668,34 +2662,65 @@ function openPlayerProfile(id) {
   if (!fs) {
     friendAction = `<button class="friend-btn primary" style="flex:1;" onclick="sendFriendRequest('${p.id}');closeProfile();">Add friend</button>`;
   } else if (fs.status === 'accepted') {
-    friendAction = `<span style="font-size:12px;color:var(--ink3);font-weight:600;flex:1;text-align:center;padding:8px 0;">Friends ✓</span>
-      <button class="friend-btn outline" onclick="friendAction('remove','${fs.id}');closeProfile();">Remove</button>`;
+    friendAction = `<span style="font-size:12px;color:var(--ink3);font-weight:600;flex:1;text-align:center;padding:8px 0;">Friends ✓</span><button class="friend-btn outline" onclick="friendAction('remove','${fs.id}');closeProfile();">Remove</button>`;
   } else if (fs.status === 'pending' && fs.iRequested) {
-    friendAction = `<span style="font-size:12px;color:var(--ink3);font-weight:600;flex:1;text-align:center;padding:8px 0;">Request sent</span>
-      <button class="friend-btn outline" onclick="friendAction('cancel','${fs.id}');closeProfile();">Cancel</button>`;
+    friendAction = `<span style="font-size:12px;color:var(--ink3);font-weight:600;flex:1;text-align:center;padding:8px 0;">Request sent</span><button class="friend-btn outline" onclick="friendAction('cancel','${fs.id}');closeProfile();">Cancel</button>`;
   } else if (fs.status === 'pending') {
-    friendAction = `<button class="friend-btn accept" style="flex:1;" onclick="friendAction('accept','${fs.id}');closeProfile();">Accept request</button>
-      <button class="friend-btn outline" onclick="friendAction('decline','${fs.id}');closeProfile();">Decline</button>`;
+    friendAction = `<button class="friend-btn accept" style="flex:1;" onclick="friendAction('accept','${fs.id}');closeProfile();">Accept request</button><button class="friend-btn outline" onclick="friendAction('decline','${fs.id}');closeProfile();">Decline</button>`;
   }
 
-  const hasDetails = detailHtml || activitySection;
+  const noPublicInfo = !detailHtml && !activitySection;
 
-  document.getElementById('prof-body').innerHTML = `
+  return `
     <div class="player-card-header">
-      ${avHtml}
-      <div class="player-card-name" style="margin-top:10px;">${p.full_name || '—'}</div>
+      ${playerCardAvatarHtml(p)}
+      <div class="player-card-name" style="margin-top:11px;">${p.full_name || '—'}</div>
       ${p.username ? `<div class="player-card-handle">@${p.username}</div>` : ''}
       ${pClubObj ? `<div class="player-card-club">${pClubObj.name}</div>` : ''}
     </div>
     <div style="padding:0 2px;">
-      ${detailHtml ? `<div class="player-card-section">${detailHtml}</div>` : ''}
+      ${detailHtml}
       ${activitySection}
-      ${!hasDetails ? `<div style="font-size:13px;color:var(--ink3);text-align:center;padding:16px 0;">No public information shared.</div>` : ''}
+      ${noPublicInfo ? `<div style="font-size:13px;color:var(--ink3);text-align:center;padding:16px 0;">No public information shared.</div>` : ''}
       ${friendAction ? `<div class="player-card-friend-row">${friendAction}</div>` : ''}
       <button onclick="closeProfile()" style="width:100%;background:var(--page);border:1.5px solid var(--border);border-radius:var(--r);padding:11px;font-family:var(--font);font-size:13px;font-weight:600;cursor:pointer;color:var(--ink2);margin-top:8px;">Close</button>
-    </div>
-  `;
+    </div>`;
+}
+
+async function openPlayerProfile(id) {
+  const p = clubPlayers.find(x => x.id === id);
+  if (!p) return;
+
+  // Show card immediately with a loading state for activity
+  document.getElementById('prof-body').innerHTML = buildPlayerCardHtml(p, null /* loading */);
   document.getElementById('prof-overlay').classList.add('on');
+
+  // Fetch feed data if this person is a friend and feed not yet cached
+  const fs = friendshipStatus(p.id);
+  if (fs?.status === 'accepted') {
+    // Use cached friendMap if available, else fetch
+    let items = (typeof friendMap !== 'undefined' && friendMap[p.id]) ? friendMap[p.id] : null;
+    if (!items) {
+      try {
+        const res = await sbFetch('/rest/v1/rpc/get_friend_feed', 'POST', {});
+        const all = Array.isArray(res) ? res : [];
+        // Build a local map for this call
+        const localMap = {};
+        all.forEach(it => { if (!localMap[it.friend_id]) localMap[it.friend_id] = []; localMap[it.friend_id].push(it); });
+        items = localMap[p.id] || [];
+        // Cache it globally too
+        if (typeof friendMap !== 'undefined') Object.assign(friendMap, localMap);
+      } catch(e) {
+        items = [];
+        console.warn('[Courtside] feed fetch for player card failed:', e.message);
+      }
+    }
+    // Re-render with activity
+    document.getElementById('prof-body').innerHTML = buildPlayerCardHtml(p, items);
+  } else {
+    // Not a friend — show card without activity section
+    document.getElementById('prof-body').innerHTML = buildPlayerCardHtml(p, null);
+  }
 }
 
 // ── Improvement resource map (v0.6 will link to real content) ────────────────
