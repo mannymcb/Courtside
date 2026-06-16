@@ -128,7 +128,16 @@ html, body { height: 100%; font-family: var(--font); background: var(--page); co
   padding: calc(env(safe-area-inset-top) + 48px) 28px 36px;
   text-align: center;
 }
-.auth-ball { margin-bottom: 14px; }
+.auth-ball { margin-bottom: 14px; animation: ballEntrance 0.75s cubic-bezier(0.34, 1.56, 0.64, 1) both; }
+@keyframes ballEntrance {
+  0%   { opacity: 1; transform: scale(0.82) rotate(-8deg); }
+  60%  { transform: scale(1.04) rotate(3deg); }
+  80%  { transform: scale(0.97) rotate(-1deg); }
+  100% { transform: scale(1) rotate(0deg); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .auth-ball { animation: none; }
+}
 .auth-hero h1 { font-size: 28px; font-weight: 300; color: #fff; letter-spacing: .5px; margin-bottom: 4px; }
 .auth-hero p { font-size: 12px; color: rgba(255,255,255,.55); letter-spacing: 1px; text-transform: lowercase; }
 .auth-body { padding: 24px 20px 48px; }
@@ -2079,48 +2088,25 @@ function feedGroupKey(dateStr) {
   return 'Earlier';
 }
 
-function feedAvatarHtml(item) {
+function feedAvatarHtml(item, sz = '40px', fs = '13px') {
   const ini = (item.display_name || '?').split(' ').map(w => w[0]).join('').slice(0,2).toUpperCase();
   const bg = 'var(--season-bg1)';
-  const sz = 'width:36px;height:36px;border-radius:50%;';
+  const style = `width:${sz};height:${sz};border-radius:50%;`;
   if (item.avatar_url) {
-    return `<div style="${sz}overflow:hidden;position:relative;">` +
+    return `<div style="${style}overflow:hidden;position:relative;flex-shrink:0;">` +
       `<img src="${item.avatar_url}" style="width:100%;height:100%;object-fit:cover;display:block;" ` +
       `onerror="this.style.display='none';this.nextElementSibling.style.display='flex'">` +
-      `<div style="display:none;${sz}background:${bg};color:#fff;align-items:center;justify-content:center;font-size:12px;font-weight:800;position:absolute;inset:0;">${ini}</div>` +
+      `<div style="display:none;${style}background:${bg};color:#fff;align-items:center;justify-content:center;font-size:${fs};font-weight:800;position:absolute;inset:0;">${ini}</div>` +
       `</div>`;
   }
-  return `<div style="${sz}background:${bg};color:#fff;display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:800;">${ini}</div>`;
+  return `<div style="${style}background:${bg};color:#fff;display:flex;align-items:center;justify-content:center;font-size:${fs};font-weight:800;flex-shrink:0;">${ini}</div>`;
 }
 
-function feedCollapse(items) {
-  // Group by friend_id + dateGroup + summaryType
-  // summaryType: 'won' | 'played' | 'practice'
-  const summaryType = s => {
-    if (!s) return 'played';
-    if (s.startsWith('won')) return 'won';
-    if (s === 'logged a practice') return 'practice';
-    return 'played';
-  };
-
-  const buckets = {};
-  items.forEach(item => {
-    const dateGrp = feedGroupKey(item.activity_date);
-    const type = item.activity_type === 'practice' ? 'practice' : summaryType((item.summary || '').toLowerCase());
-    const key = `${item.friend_id}|${dateGrp}|${type}`;
-    if (!buckets[key]) buckets[key] = { item, type, dateGrp, count: 0, scores: [] };
-    buckets[key].count++;
-    if (item.score) buckets[key].scores.push(item.score);
-  });
-
-  return Object.values(buckets);
-}
-
-function feedGroupedSummary(type, count) {
-  if (type === 'won')      return count === 1 ? 'Won a match'    : `Won ${count} matches`;
-  if (type === 'played')   return count === 1 ? 'Played a match' : `Played ${count} matches`;
-  if (type === 'practice') return count === 1 ? 'Had a practice' : `Had ${count} practices`;
-  return 'Logged activity';
+function feedSummaryType(item) {
+  if (item.activity_type === 'practice') return 'practice';
+  const s = (item.summary || '').toLowerCase();
+  if (s.startsWith('won')) return 'won';
+  return 'played';
 }
 
 function feedBadgeCls(type) {
@@ -2129,62 +2115,117 @@ function feedBadgeCls(type) {
   return 'loss';
 }
 
+function feedLatestSummary(items) {
+  // Summarise all items for this friend into one line
+  const byType = { won: 0, played: 0, practice: 0 };
+  items.forEach(it => { byType[feedSummaryType(it)]++; });
+  const parts = [];
+  if (byType.won)      parts.push(byType.won === 1      ? 'Won a match'    : `Won ${byType.won} matches`);
+  if (byType.played)   parts.push(byType.played === 1   ? 'Played a match' : `Played ${byType.played} matches`);
+  if (byType.practice) parts.push(byType.practice === 1 ? 'Had a practice' : `Had ${byType.practice} practices`);
+  return parts.join(' · ') || 'Logged activity';
+}
+
+function feedExpandedRows(friendItems) {
+  // Group by date section
+  const gPri = { Today: 0, Yesterday: 1, 'This week': 2, 'Last week': 3, Earlier: 4 };
+  const sections = {};
+  const order = [];
+  friendItems.forEach(it => {
+    const k = feedGroupKey(it.activity_date);
+    if (!sections[k]) { sections[k] = []; order.push(k); }
+    sections[k].push(it);
+  });
+  order.sort((a, b) => (gPri[a] ?? 5) - (gPri[b] ?? 5));
+
+  let html = '';
+  order.forEach(key => {
+    html += `<div style="font-size:10px;font-weight:700;letter-spacing:.5px;text-transform:uppercase;color:var(--ink4);padding:8px 0 4px;">${key}</div>`;
+    sections[key].forEach(it => {
+      const type = feedSummaryType(it);
+      const badgeCls = feedBadgeCls(type);
+      const icon = type === 'won' ? '✓' : '●';
+      const summary = type === 'won' ? 'Won a match' : type === 'practice' ? 'Had a practice' : 'Played a match';
+      const scoreHtml = it.score ? `<span class="feed-score" style="margin-left:6px;">${formatScore({ score: it.score })}</span>` : '';
+      html += `<div style="display:flex;align-items:center;gap:8px;padding:5px 0;border-bottom:1px solid var(--border);">
+        <div class="feed-badge ${badgeCls}" style="position:static;width:18px;height:18px;border:none;flex-shrink:0;">${icon}</div>
+        <div style="flex:1;font-size:13px;color:var(--ink2);">${summary}${scoreHtml}</div>
+        <div style="font-size:11px;color:var(--ink4);">${feedDateLabel(it.activity_date)}</div>
+      </div>`;
+    });
+  });
+  return html;
+}
+
+// State: which friend card is expanded
+let feedExpandedId = null;
+
 async function renderFeed(el) {
   el.innerHTML = '<div class="club-empty" style="padding:24px 0;">Loading feed…</div>';
   try {
     const res = await sbFetch('/rest/v1/rpc/get_friend_feed', 'POST', {});
-    const raw = Array.isArray(res) ? res.slice(0, 20) : [];
+    const raw = Array.isArray(res) ? res.slice(0, 50) : [];
     if (!raw.length) {
-      el.innerHTML = '<div class="club-empty"><div class="club-empty-title">No friend activity yet</div><div>Add players from the Directory or log a session to get started.</div></div>';
+      el.innerHTML = '<div class="club-empty"><div class="club-empty-title">No friend activity yet</div><div>Add players or log a session to get started.</div></div>';
       return;
     }
 
-    const collapsed = feedCollapse(raw);
-
-    // Sort collapsed buckets by dateGroup priority then by original item date
-    const groupPriority = { 'Today': 0, 'Yesterday': 1, 'This week': 2, 'Last week': 3, 'Earlier': 4 };
-    collapsed.sort((a, b) => {
-      const gd = (groupPriority[a.dateGrp] ?? 5) - (groupPriority[b.dateGrp] ?? 5);
-      if (gd !== 0) return gd;
-      return (b.item.activity_date || '').localeCompare(a.item.activity_date || '');
+    // Group all items by friend_id, preserving insertion order (already date-sorted by RPC)
+    const friendMap = {};
+    const friendOrder = [];
+    raw.forEach(item => {
+      if (!friendMap[item.friend_id]) {
+        friendMap[item.friend_id] = [];
+        friendOrder.push(item.friend_id);
+      }
+      friendMap[item.friend_id].push(item);
     });
 
-    // Re-group into date sections
-    const sections = {};
-    const sectionOrder = [];
-    collapsed.forEach(b => {
-      if (!sections[b.dateGrp]) { sections[b.dateGrp] = []; sectionOrder.push(b.dateGrp); }
-      sections[b.dateGrp].push(b);
-    });
+    function renderCards() {
+      let html = '';
+      friendOrder.forEach(fid => {
+        const items = friendMap[fid];
+        const latest = items[0];
+        const summary = feedLatestSummary(items);
+        const topType = feedSummaryType(latest);
+        const badgeCls = feedBadgeCls(topType);
+        const badgeIcon = topType === 'won' ? '✓' : '●';
+        const isOpen = feedExpandedId === fid;
+        const expandedHtml = isOpen ? `<div style="border-top:1px solid var(--border);margin-top:8px;padding-top:2px;">${feedExpandedRows(items)}<div style="border-top:none;padding-bottom:2px;"></div></div>` : '';
+        const chevron = isOpen ? '▾' : '›';
 
-    let html = '';
-    sectionOrder.forEach(key => {
-      html += `<div class="feed-group-label">${key}</div>`;
-      html += sections[key].map(b => {
-        const { item, type, count, scores } = b;
-        const summary = feedGroupedSummary(type, count);
-        const badgeCls = feedBadgeCls(type);
-        const badgeIcon = type === 'won' ? '✓' : '●';
-        // Only show score for single-item rows with a score
-        const scoreHtml = count === 1 && scores.length && scores[0]
-          ? `<span class="feed-score">${formatScore({ score: scores[0] })}</span>`
-          : '';
-        const av = feedAvatarHtml(item);
-        return `<div class="feed-card">
-          <div class="feed-av-wrap">
-            ${av}
-            <div class="feed-badge ${badgeCls}">${badgeIcon}</div>
+        html += `<div class="feed-card" style="align-items:flex-start;flex-direction:column;padding:11px 0;cursor:pointer;" onclick="toggleFeedCard('${fid}')">
+          <div style="display:flex;align-items:center;gap:10px;width:100%;">
+            <div class="feed-av-wrap">
+              ${feedAvatarHtml(latest)}
+              <div class="feed-badge ${badgeCls}">${badgeIcon}</div>
+            </div>
+            <div class="feed-body">
+              <div class="feed-name">${latest.display_name || '—'}</div>
+              <div class="feed-summary">${summary}</div>
+            </div>
+            <div style="display:flex;flex-direction:column;align-items:flex-end;flex-shrink:0;gap:2px;">
+              <div class="feed-date">${feedDateLabel(latest.activity_date)}</div>
+              <div style="font-size:14px;color:var(--ink3);line-height:1;">${chevron}</div>
+            </div>
           </div>
-          <div class="feed-body">
-            <div class="feed-name">${item.display_name || '—'}</div>
-            <div class="feed-summary">${summary}${scoreHtml ? ' ' + scoreHtml : ''}</div>
-          </div>
-          <div class="feed-date">${feedDateLabel(item.activity_date)}</div>
+          ${expandedHtml}
         </div>`;
-      }).join('');
-    });
+      });
+      return html;
+    }
 
-    el.innerHTML = html;
+    function doRender() {
+      el.innerHTML = renderCards();
+    }
+
+    // Expose toggle so onclick works
+    window.toggleFeedCard = (fid) => {
+      feedExpandedId = feedExpandedId === fid ? null : fid;
+      doRender();
+    };
+
+    doRender();
   } catch(e) {
     el.innerHTML = `<div class="club-empty"><div style="color:#e74c3c;margin-bottom:12px;font-size:13px;">Could not load feed.</div><button onclick="setClubTab('feed')" style="background:var(--season-bg1);color:#fff;border:none;border-radius:var(--r);padding:8px 16px;font-family:var(--font);font-size:12px;font-weight:600;cursor:pointer;">↻ Retry</button></div>`;
   }
