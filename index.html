@@ -452,6 +452,21 @@ html, body { height: 100%; font-family: var(--font); background: var(--page); co
 .friend-row-meta { font-size: 11px; color: var(--ink3); margin-top: 1px; }
 .friend-section-label { font-size: 10px; font-weight: 700; letter-spacing: .6px; text-transform: uppercase; color: var(--ink3); margin: 14px 0 8px; }
 
+/* ── Weekly bundles ── */
+.week-bundle { background: var(--surface); border-radius: var(--r); border: 1px solid var(--border); margin-bottom: 10px; overflow: hidden; box-shadow: 0 1px 3px rgba(0,0,0,.05); }
+.week-bundle-header { padding: 14px 16px; cursor: pointer; display: flex; align-items: center; justify-content: space-between; gap: 10px; }
+.week-bundle-header:active { background: var(--page); }
+.week-bundle-label { font-size: 11px; font-weight: 700; letter-spacing: .5px; text-transform: uppercase; color: var(--ink3); margin-bottom: 3px; }
+.week-bundle-headline { font-size: 17px; font-weight: 800; color: var(--ink); line-height: 1.2; }
+.week-bundle-sub { font-size: 12px; color: var(--ink3); margin-top: 3px; }
+.week-bundle-chips { display: flex; flex-wrap: wrap; gap: 5px; margin-top: 7px; }
+.week-bundle-chip { font-size: 11px; font-weight: 600; background: var(--page); color: var(--ink3); border-radius: 10px; padding: 2px 9px; border: 1px solid var(--border); }
+.week-bundle-chevron { font-size: 18px; color: var(--ink4); flex-shrink: 0; transition: transform .2s; }
+.week-bundle.open .week-bundle-chevron { transform: rotate(90deg); }
+.week-bundle-entries { display: none; border-top: 1px solid var(--border); padding: 8px 12px 4px; }
+.week-bundle.open .week-bundle-entries { display: block; }
+.week-bundle-show-more { text-align: center; padding: 14px 0 4px; }
+
 /* ── Toast ── */
 #toast { position: fixed; bottom: calc(env(safe-area-inset-bottom) + 80px); left: 50%; transform: translateX(-50%) translateY(10px); background: #1a1a1a; color: #fff; padding: 10px 20px; border-radius: 20px; font-size: 13px; font-weight: 600; opacity: 0; transition: all .25s; z-index: 999; white-space: nowrap; pointer-events: none; }
 #toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
@@ -3053,15 +3068,131 @@ function setFilter(f, btn) {
   renderActivity();
 }
 
+// Track which week bundles are open (ISO week key)
+let openWeeks = new Set();
+let showAllWeeks = false;
+
+function weekStartOf(dateStr) {
+  // Returns the Monday of the week containing dateStr as YYYY-MM-DD
+  const d = new Date((dateStr || today()) + 'T12:00:00');
+  const day = d.getDay(); // 0=Sun
+  const diff = (day === 0 ? -6 : 1 - day);
+  d.setDate(d.getDate() + diff);
+  return d.toISOString().slice(0, 10);
+}
+
+function weekLabel(weekStart) {
+  const todayMonday = weekStartOf(today());
+  if (weekStart === todayMonday) return 'This week';
+  // "Week of Jun 9"
+  const d = new Date(weekStart + 'T12:00:00');
+  return 'Week of ' + d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+}
+
+function buildWeekBundles(entries) {
+  const map = {};
+  const order = [];
+  entries.forEach(e => {
+    const ws = weekStartOf(e._date);
+    if (!map[ws]) { map[ws] = []; order.push(ws); }
+    map[ws].push(e);
+  });
+  // order is already newest-first because allEntries is sorted desc
+  return order.map(ws => ({ weekStart: ws, entries: map[ws] }));
+}
+
+function weekBundleSummary(entries) {
+  const matches = entries.filter(e => e._kind === 'match');
+  const practices = entries.filter(e => e._kind === 'practice');
+  const wins = matches.filter(e => e.result === 'win').length;
+  const losses = matches.length - wins;
+
+  // headline: e.g. "3 matches · 2 practices" or "2 practices" or "1 match"
+  const parts = [];
+  if (matches.length) parts.push(matches.length === 1 ? '1 match' : `${matches.length} matches`);
+  if (practices.length) parts.push(practices.length === 1 ? '1 practice' : `${practices.length} practices`);
+  const headline = parts.join(' · ') || `${entries.length} sessions`;
+
+  // sub: wins/losses
+  let sub = '';
+  if (matches.length) {
+    sub = wins === matches.length ? `${wins}–0` :
+          losses === matches.length ? `0–${losses}` :
+          `${wins}–${losses}`;
+    sub = `W–L: ${sub}`;
+  }
+
+  // focus chips: top 3 across all entries
+  const focusCount = {};
+  entries.forEach(e => (e.focus_areas || []).forEach(f => { focusCount[f] = (focusCount[f] || 0) + 1; }));
+  const topFocus = Object.entries(focusCount).sort((a,b) => b[1]-a[1]).slice(0,3).map(([f]) => f);
+
+  return { headline, sub, topFocus, matchCount: matches.length, practiceCount: practices.length, wins, losses, total: entries.length };
+}
+
+function renderWeekBundle(bundle, isOpen) {
+  const { weekStart, entries } = bundle;
+  const label = weekLabel(weekStart);
+  const s = weekBundleSummary(entries);
+  const openCls = isOpen ? ' open' : '';
+  const focusChips = s.topFocus.length
+    ? `<div class="week-bundle-chips">${s.topFocus.map(f => `<span class="week-bundle-chip">${f}</span>`).join('')}</div>`
+    : '';
+  const subLine = [s.sub, entries.length > 1 ? `${s.total} sessions` : null].filter(Boolean).join('  ·  ');
+  const entryHtml = entries.map(e => `<div style="padding:6px 0;">${entryCard(e)}</div>`).join('');
+
+  return `<div class="week-bundle${openCls}" id="wb-${weekStart}">
+    <div class="week-bundle-header" onclick="toggleWeekBundle('${weekStart}')">
+      <div style="flex:1;min-width:0;">
+        <div class="week-bundle-label">${label}</div>
+        <div class="week-bundle-headline">${s.headline}</div>
+        ${subLine ? `<div class="week-bundle-sub">${subLine}</div>` : ''}
+        ${focusChips}
+      </div>
+      <div class="week-bundle-chevron">›</div>
+    </div>
+    <div class="week-bundle-entries">${entryHtml}</div>
+  </div>`;
+}
+
+function toggleWeekBundle(weekStart) {
+  const el = document.getElementById('wb-' + weekStart);
+  if (!el) return;
+  el.classList.toggle('open');
+  if (el.classList.contains('open')) openWeeks.add(weekStart);
+  else openWeeks.delete(weekStart);
+}
+
 function renderActivity() {
+  const el = document.getElementById('activity-list');
   let filtered = allEntries;
   if (activityFilter === 'match') filtered = allEntries.filter(e => e._kind === 'match');
   else if (activityFilter === 'practice') filtered = allEntries.filter(e => e._kind === 'practice');
   else if (activityFilter === 'win') filtered = allEntries.filter(e => e._kind === 'match' && e.result === 'win');
   else if (activityFilter === 'loss') filtered = allEntries.filter(e => e._kind === 'match' && e.result === 'loss');
-  document.getElementById('activity-list').innerHTML = filtered.length
-    ? filtered.map(entryCard).join('')
-    : '<div class="empty-state">No entries match this filter.</div>';
+
+  if (!filtered.length) {
+    el.innerHTML = '<div class="empty-state" style="padding:32px 16px;"><div style="font-size:15px;font-weight:700;color:var(--ink);margin-bottom:6px;">No activity yet</div><div style="font-size:13px;color:var(--ink3);line-height:1.6;">Log a match or practice to start tracking your progress.</div></div>';
+    return;
+  }
+
+  const bundles = buildWeekBundles(filtered);
+  const todayMonday = weekStartOf(today());
+  const maxWeeks = showAllWeeks ? bundles.length : 8;
+  const visible = bundles.slice(0, maxWeeks);
+
+  // Auto-open current week
+  if (bundles.length && bundles[0].weekStart === todayMonday) {
+    openWeeks.add(todayMonday);
+  }
+  // Keep previously opened weeks open
+  let html = visible.map(b => renderWeekBundle(b, openWeeks.has(b.weekStart))).join('');
+
+  if (bundles.length > 8 && !showAllWeeks) {
+    html += `<div class="week-bundle-show-more"><button onclick="showAllWeeks=true;renderActivity();" style="font-size:13px;font-weight:600;color:var(--season-bg1);background:none;border:none;cursor:pointer;font-family:var(--font);">Show older activity</button></div>`;
+  }
+
+  el.innerHTML = html;
 }
 
 // ── Success overlay ────────────────────────────────────────────────────────────
