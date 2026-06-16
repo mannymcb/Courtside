@@ -454,14 +454,14 @@ html, body { height: 100%; font-family: var(--font); background: var(--page); co
       <div class="auth-ball">
         <svg width="52" height="52" viewBox="0 0 52 52" xmlns="http://www.w3.org/2000/svg">
           <defs>
-            <radialGradient id="ball-grad" cx="40%" cy="35%" r="65%">
-              <stop offset="0%" stop-color="#e8f44a"/>
-              <stop offset="60%" stop-color="#c8e63a"/>
-              <stop offset="100%" stop-color="#b8a820" stop-opacity="0.6"/>
+            <radialGradient id="ball-grad" cx="38%" cy="32%" r="68%">
+              <stop offset="0%" stop-color="#f5ff5c"/>
+              <stop offset="45%" stop-color="#dff53a"/>
+              <stop offset="100%" stop-color="#b8d420" stop-opacity="0.75"/>
             </radialGradient>
             <radialGradient id="ball-accent" cx="75%" cy="72%" r="45%">
-              <stop offset="0%" stop-color="#d96010" stop-opacity="0.22"/>
-              <stop offset="100%" stop-color="#d96010" stop-opacity="0"/>
+              <stop offset="0%" stop-color="#e06510" stop-opacity="0.18"/>
+              <stop offset="100%" stop-color="#e06510" stop-opacity="0"/>
             </radialGradient>
             <filter id="ball-glow" x="-15%" y="-15%" width="130%" height="130%">
               <feGaussianBlur stdDeviation="1.5" result="blur"/>
@@ -517,14 +517,14 @@ html, body { height: 100%; font-family: var(--font); background: var(--page); co
       <div class="auth-ball">
         <svg width="52" height="52" viewBox="0 0 52 52" xmlns="http://www.w3.org/2000/svg">
           <defs>
-            <radialGradient id="ball-grad" cx="40%" cy="35%" r="65%">
-              <stop offset="0%" stop-color="#e8f44a"/>
-              <stop offset="60%" stop-color="#c8e63a"/>
-              <stop offset="100%" stop-color="#b8a820" stop-opacity="0.6"/>
+            <radialGradient id="ball-grad" cx="38%" cy="32%" r="68%">
+              <stop offset="0%" stop-color="#f5ff5c"/>
+              <stop offset="45%" stop-color="#dff53a"/>
+              <stop offset="100%" stop-color="#b8d420" stop-opacity="0.75"/>
             </radialGradient>
             <radialGradient id="ball-accent" cx="75%" cy="72%" r="45%">
-              <stop offset="0%" stop-color="#d96010" stop-opacity="0.22"/>
-              <stop offset="100%" stop-color="#d96010" stop-opacity="0"/>
+              <stop offset="0%" stop-color="#e06510" stop-opacity="0.18"/>
+              <stop offset="100%" stop-color="#e06510" stop-opacity="0"/>
             </radialGradient>
             <filter id="ball-glow" x="-15%" y="-15%" width="130%" height="130%">
               <feGaussianBlur stdDeviation="1.5" result="blur"/>
@@ -2115,15 +2115,54 @@ function feedBadgeCls(type) {
   return 'loss';
 }
 
-function feedLatestSummary(items) {
-  // Summarise all items for this friend into one line
+function feedPrimary(items, periodLabel) {
+  // Calm, contextual headline for the card
+  const total = items.length;
+  const latestDate = items[0]?.activity_date;
+  const latestType = feedSummaryType(items[0]);
+  if (periodLabel === 'Today') {
+    if (latestType === 'practice') return 'Practiced today';
+    return 'Played today';
+  }
+  if (periodLabel === 'Yesterday') {
+    if (latestType === 'practice') return 'Practiced yesterday';
+    return 'Played yesterday';
+  }
+  if (total >= 8) return 'Active recently';
+  if (periodLabel === 'This week') return 'Active this week';
+  return 'Back on court';
+}
+
+function feedStats(items) {
+  // Supporting stat line: "7 wins · 6 practices" style
   const byType = { won: 0, played: 0, practice: 0 };
   items.forEach(it => { byType[feedSummaryType(it)]++; });
   const parts = [];
-  if (byType.won)      parts.push(byType.won === 1      ? 'Won a match'    : `Won ${byType.won} matches`);
-  if (byType.played)   parts.push(byType.played === 1   ? 'Played a match' : `Played ${byType.played} matches`);
-  if (byType.practice) parts.push(byType.practice === 1 ? 'Had a practice' : `Had ${byType.practice} practices`);
-  return parts.join(' · ') || 'Logged activity';
+  const matches = byType.won + byType.played;
+  if (byType.won > 0 && byType.played === 0) {
+    parts.push(byType.won === 1 ? '1 win' : `${byType.won} wins`);
+  } else if (matches > 0) {
+    parts.push(matches === 1 ? '1 match' : `${matches} matches`);
+  }
+  if (byType.practice > 0) {
+    parts.push(byType.practice === 1 ? '1 practice' : `${byType.practice} practices`);
+  }
+  return parts.join(' · ');
+}
+
+function feedPeriodLabel(items) {
+  // Accurate period based on actual activity dates
+  const dates = [...new Set(items.map(it => it.activity_date).filter(Boolean))];
+  if (dates.length === 0) return '';
+  if (dates.length === 1) return feedDateLabel(dates[0]);
+  // Multiple dates — find oldest
+  const sorted = dates.slice().sort();
+  const oldest = sorted[0];
+  const now = new Date();
+  const todayStart = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+  const diff = Math.floor((todayStart - new Date(oldest + 'T12:00:00')) / 864e5);
+  if (diff < 7) return 'This week';
+  return 'Last 14 days';
 }
 
 function feedExpandedRows(friendItems) {
@@ -2186,28 +2225,30 @@ async function renderFeed(el) {
       friendOrder.forEach(fid => {
         const items = friendMap[fid];
         const latest = items[0];
-        const summary = feedLatestSummary(items);
+        const period = feedPeriodLabel(items);
+        const primary = feedPrimary(items, period);
+        const stats = feedStats(items);
         const topType = feedSummaryType(latest);
         const badgeCls = feedBadgeCls(topType);
         const badgeIcon = topType === 'won' ? '✓' : '●';
         const isOpen = feedExpandedId === fid;
-        const expandedHtml = isOpen ? `<div style="border-top:1px solid var(--border);margin-top:8px;padding-top:2px;">${feedExpandedRows(items)}<div style="border-top:none;padding-bottom:2px;"></div></div>` : '';
-        const chevron = isOpen ? '▾' : '›';
+        const expandedHtml = isOpen
+          ? `<div style="border-top:1px solid var(--border);margin-top:8px;padding-top:2px;">${feedExpandedRows(items)}</div>`
+          : '';
 
-        html += `<div class="feed-card" style="align-items:flex-start;flex-direction:column;padding:11px 0;cursor:pointer;" onclick="toggleFeedCard('${fid}')">
+        html += `<div class="feed-card" style="align-items:flex-start;flex-direction:column;padding:12px 0;cursor:pointer;" onclick="toggleFeedCard('${fid}')">
           <div style="display:flex;align-items:center;gap:10px;width:100%;">
-            <div class="feed-av-wrap">
+            <div class="feed-av-wrap" style="flex-shrink:0;">
               ${feedAvatarHtml(latest)}
               <div class="feed-badge ${badgeCls}">${badgeIcon}</div>
             </div>
-            <div class="feed-body">
+            <div class="feed-body" style="flex:1;min-width:0;">
               <div class="feed-name">${latest.display_name || '—'}</div>
-              <div class="feed-summary">${summary}</div>
+              <div class="feed-summary">${primary}</div>
+              ${stats ? `<div style="font-size:11px;color:var(--ink3);margin-top:2px;">${stats}</div>` : ''}
+              <div style="font-size:11px;color:var(--season-bg1);font-weight:600;margin-top:4px;">View activity ›</div>
             </div>
-            <div style="display:flex;flex-direction:column;align-items:flex-end;flex-shrink:0;gap:2px;">
-              <div class="feed-date">${feedDateLabel(latest.activity_date)}</div>
-              <div style="font-size:14px;color:var(--ink3);line-height:1;">${chevron}</div>
-            </div>
+            <div style="font-size:11px;color:var(--ink4);flex-shrink:0;text-align:right;padding-top:1px;">${period}</div>
           </div>
           ${expandedHtml}
         </div>`;
