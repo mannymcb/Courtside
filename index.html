@@ -487,6 +487,26 @@ html, body { height: 100%; font-family: var(--font); background: var(--page); co
 .player-card-focus-chip { font-size: 11px; font-weight: 600; background: var(--page); color: var(--ink3); border-radius: 10px; padding: 3px 9px; border: 1px solid var(--border); }
 .player-card-friend-row { padding: 14px 0 2px; display: flex; gap: 8px; }
 
+/* ── Invite sheet ── */
+.invite-overlay { position: fixed; inset: 0; background: rgba(0,0,0,.45); z-index: 600; display: flex; align-items: flex-end; opacity: 0; pointer-events: none; transition: opacity .25s; }
+.invite-overlay.on { opacity: 1; pointer-events: all; }
+.invite-sheet { background: var(--surface); border-radius: 18px 18px 0 0; padding: 20px 18px 36px; width: 100%; max-height: 90vh; overflow-y: auto; transform: translateY(100%); transition: transform .28s cubic-bezier(0.32,0.72,0,1); }
+.invite-overlay.on .invite-sheet { transform: translateY(0); }
+.invite-sheet-title { font-size: 17px; font-weight: 800; color: var(--ink); margin-bottom: 4px; }
+.invite-sheet-sub { font-size: 13px; color: var(--ink3); margin-bottom: 18px; }
+.invite-pill-row { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 16px; }
+.invite-pill { padding: 8px 16px; border-radius: 20px; border: 1.5px solid var(--border); background: var(--page); font-family: var(--font); font-size: 13px; font-weight: 600; color: var(--ink3); cursor: pointer; transition: all .12s; }
+.invite-pill.on { background: var(--season-bg1); color: #fff; border-color: var(--season-bg1); }
+.invite-section-label { font-size: 11px; font-weight: 700; letter-spacing: .5px; text-transform: uppercase; color: var(--ink3); margin-bottom: 8px; }
+.invite-note { width: 100%; font-family: var(--font); font-size: 14px; color: var(--ink); background: var(--page); border: 1.5px solid var(--border); border-radius: var(--rsm); padding: 10px 13px; outline: none; resize: none; box-sizing: border-box; margin-bottom: 18px; }
+.invite-note:focus { border-color: var(--season-bg1); }
+
+/* ── Invite cards in Friends tab ── */
+.invite-card { background: var(--surface); border-radius: var(--r); border: 1px solid var(--border); padding: 12px 14px; margin-bottom: 8px; }
+.invite-card-headline { font-size: 13px; font-weight: 600; color: var(--ink); margin-bottom: 6px; }
+.invite-card-meta { font-size: 12px; color: var(--ink3); margin-bottom: 10px; }
+.invite-card-actions { display: flex; gap: 7px; flex-wrap: wrap; }
+
 /* ── Toast ── */
 #toast { position: fixed; bottom: calc(env(safe-area-inset-bottom) + 80px); left: 50%; transform: translateX(-50%) translateY(10px); background: #1a1a1a; color: #fff; padding: 10px 20px; border-radius: 20px; font-size: 13px; font-weight: 600; opacity: 0; transition: all .25s; z-index: 999; white-space: nowrap; pointer-events: none; }
 #toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
@@ -885,6 +905,33 @@ html, body { height: 100%; font-family: var(--font); background: var(--page); co
 
   </div><!-- /app-shell -->
   <div id="toast"></div>
+
+  <!-- INVITE SHEET -->
+  <div class="invite-overlay" id="invite-overlay" onclick="if(event.target===this)closeInviteSheet()">
+    <div class="invite-sheet">
+      <div class="invite-sheet-title" id="invite-sheet-title">Invite to hit</div>
+      <div class="invite-sheet-sub" id="invite-sheet-sub">Want to hit this week?</div>
+      <div class="invite-section-label">Type</div>
+      <div class="invite-pill-row" id="invite-type-pills">
+        <button type="button" class="invite-pill on" onclick="selectInvitePill('type',this,'hit')">Hit</button>
+        <button type="button" class="invite-pill" onclick="selectInvitePill('type',this,'practice')">Practice</button>
+        <button type="button" class="invite-pill" onclick="selectInvitePill('type',this,'match')">Match</button>
+        <button type="button" class="invite-pill" onclick="selectInvitePill('type',this,'doubles')">Doubles</button>
+      </div>
+      <div class="invite-section-label">When</div>
+      <div class="invite-pill-row" id="invite-timing-pills">
+        <button type="button" class="invite-pill" onclick="selectInvitePill('timing',this,'today')">Today</button>
+        <button type="button" class="invite-pill on" onclick="selectInvitePill('timing',this,'this_week')">This week</button>
+        <button type="button" class="invite-pill" onclick="selectInvitePill('timing',this,'this_weekend')">This weekend</button>
+        <button type="button" class="invite-pill" onclick="selectInvitePill('timing',this,'next_week')">Next week</button>
+        <button type="button" class="invite-pill" onclick="selectInvitePill('timing',this,'suggest_time')">Suggest a time</button>
+      </div>
+      <div class="invite-section-label">Note <span style="font-weight:400;text-transform:none;letter-spacing:0;color:var(--ink4);">(optional)</span></div>
+      <textarea class="invite-note" id="invite-note" rows="2" placeholder="Add a quick note…"></textarea>
+      <button class="save-log-btn" id="invite-send-btn" onclick="submitHitInvite()">Send invite</button>
+      <button type="button" onclick="closeInviteSheet()" style="width:100%;background:none;border:none;font-family:var(--font);font-size:13px;font-weight:600;color:var(--ink3);cursor:pointer;padding:12px 0 0;">Cancel</button>
+    </div>
+  </div>
   <div class="success-overlay" id="success-overlay">
     <div class="success-icon" id="success-icon"></div>
     <div id="success-title" style="font-size:15px;font-weight:700;"></div>
@@ -1527,6 +1574,109 @@ async function saveProfileEdits() {
     errEl.textContent = 'Error: ' + err.message; errEl.style.display = 'block';
     btn.textContent = 'Save changes'; btn.disabled = false;
   }
+}
+
+// ── Hit Invites ──────────────────────────────────────────────────────────────
+let hitInvites = [];
+let inviteReceiverId = null;
+let inviteType = 'hit';
+let inviteTiming = 'this_week';
+
+async function loadHitInvites() {
+  if (!profile?.id) return;
+  try {
+    const rows = await sbFetch(
+      `/rest/v1/hit_invites?or=(sender_id.eq.${profile.id},receiver_id.eq.${profile.id})&order=created_at.desc&limit=30`
+    );
+    hitInvites = Array.isArray(rows) ? rows : [];
+    console.log('[Courtside] hit invites loaded:', hitInvites.length);
+  } catch(e) {
+    console.warn('[Courtside] hit invites load failed:', e.message);
+    hitInvites = [];
+  }
+}
+
+function openInviteSheet(receiverId, receiverName) {
+  inviteReceiverId = receiverId;
+  inviteType = 'hit';
+  inviteTiming = 'this_week';
+  document.getElementById('invite-sheet-title').textContent = `Invite ${receiverName || 'friend'} to hit`;
+  document.getElementById('invite-sheet-sub').textContent = 'Want to hit this week?';
+  document.getElementById('invite-note').value = '';
+  // Reset pills
+  document.querySelectorAll('#invite-type-pills .invite-pill').forEach((b,i) => b.classList.toggle('on', i===0));
+  document.querySelectorAll('#invite-timing-pills .invite-pill').forEach((b,i) => b.classList.toggle('on', i===1));
+  document.getElementById('invite-overlay').classList.add('on');
+}
+
+function closeInviteSheet() {
+  document.getElementById('invite-overlay').classList.remove('on');
+  inviteReceiverId = null;
+}
+
+function selectInvitePill(group, btn, value) {
+  const container = btn.closest('.invite-pill-row');
+  container.querySelectorAll('.invite-pill').forEach(b => b.classList.remove('on'));
+  btn.classList.add('on');
+  if (group === 'type') inviteType = value;
+  else inviteTiming = value;
+  // Update sub-heading to reflect type
+  const typeLabels = { hit: 'hit', practice: 'practice', match: 'match', doubles: 'doubles' };
+  document.getElementById('invite-sheet-sub').textContent =
+    `Want to ${typeLabels[inviteType] || 'hit'} this week?`;
+}
+
+async function submitHitInvite() {
+  if (!inviteReceiverId) return;
+  const btn = document.getElementById('invite-send-btn');
+  btn.textContent = 'Sending…'; btn.disabled = true;
+  const note = document.getElementById('invite-note').value.trim() || null;
+  try {
+    await sbFetch('/rest/v1/rpc/send_hit_invite', 'POST', {
+      p_receiver_id: inviteReceiverId,
+      p_invite_type: inviteType,
+      p_timing: inviteTiming,
+      p_note: note,
+    });
+    closeInviteSheet();
+    await loadHitInvites();
+    showToast('Invite sent 🎾');
+  } catch(e) {
+    showToast(e.message || 'Could not send invite');
+  } finally {
+    btn.textContent = 'Send invite'; btn.disabled = false;
+  }
+}
+
+async function respondInvite(inviteId, response) {
+  try {
+    await sbFetch('/rest/v1/rpc/respond_hit_invite', 'POST', {
+      p_invite_id: inviteId,
+      p_response: response,
+    });
+    await loadHitInvites();
+    const el = document.getElementById('club-tab-content');
+    if (el && clubActiveTab === 'friends') await renderFriends(el);
+    showToast(response === 'accepted' ? 'Accepted!' : response === 'maybe' ? 'Maybe noted' : 'Declined');
+  } catch(e) { showToast(e.message || 'Could not respond'); }
+}
+
+async function cancelInvite(inviteId) {
+  try {
+    await sbFetch('/rest/v1/rpc/cancel_hit_invite', 'POST', { p_invite_id: inviteId });
+    await loadHitInvites();
+    const el = document.getElementById('club-tab-content');
+    if (el && clubActiveTab === 'friends') await renderFriends(el);
+    showToast('Invite cancelled');
+  } catch(e) { showToast(e.message || 'Could not cancel'); }
+}
+
+function inviteTimingLabel(t) {
+  return { today: 'today', this_week: 'this week', this_weekend: 'this weekend', next_week: 'next week', suggest_time: 'TBD' }[t] || t;
+}
+
+function inviteTypeLabel(t) {
+  return { hit: 'hit', practice: 'practice', match: 'a match', doubles: 'doubles' }[t] || t;
 }
 
 // ── Sound ────────────────────────────────────────────────────────────────────
@@ -2344,6 +2494,7 @@ async function renderDirectory(el) {
 // ── Friends ───────────────────────────────────────────────────────────────────
 async function renderFriends(el) {
   await loadFriendships();
+  await loadHitInvites();
   const myId = profile.id;
 
   const pending = myFriendships.filter(f => f.status === 'pending' && f.requester_id !== myId);
@@ -2390,6 +2541,44 @@ async function renderFriends(el) {
   }
 
   let html = '';
+
+  // ── Invites section ────────────────────────────────────────────────────────
+  const myIncomingInvites = hitInvites.filter(i => i.receiver_id === myId && i.status === 'pending');
+  const myOutgoingInvites = hitInvites.filter(i => i.sender_id === myId && i.status === 'pending');
+
+  if (myIncomingInvites.length || myOutgoingInvites.length) {
+    html += `<div class="friend-section-label">Invites</div>`;
+
+    myIncomingInvites.forEach(inv => {
+      const senderProf = friendProfiles[inv.sender_id];
+      const senderName = senderProf?.full_name || 'Someone';
+      const typeLbl = inviteTypeLabel(inv.invite_type);
+      const timeLbl = inviteTimingLabel(inv.timing);
+      html += `<div class="invite-card">
+        <div class="invite-card-headline">${senderName} invited you to ${typeLbl} ${timeLbl}</div>
+        ${inv.note ? `<div class="invite-card-meta">"${inv.note}"</div>` : ''}
+        <div class="invite-card-actions">
+          <button class="friend-btn accept" onclick="respondInvite('${inv.id}','accepted')">Accept</button>
+          <button class="friend-btn outline" onclick="respondInvite('${inv.id}','maybe')">Maybe</button>
+          <button class="friend-btn outline" onclick="respondInvite('${inv.id}','declined')">Decline</button>
+        </div>
+      </div>`;
+    });
+
+    myOutgoingInvites.forEach(inv => {
+      const recvProf = friendProfiles[inv.receiver_id] || {};
+      const recvName = recvProf?.full_name || 'friend';
+      const typeLbl = inviteTypeLabel(inv.invite_type);
+      const timeLbl = inviteTimingLabel(inv.timing);
+      html += `<div class="invite-card">
+        <div class="invite-card-headline">Invite sent to ${recvName}</div>
+        <div class="invite-card-meta">${typeLbl} · ${timeLbl}</div>
+        <div class="invite-card-actions">
+          <button class="friend-btn outline" onclick="cancelInvite('${inv.id}')">Cancel</button>
+        </div>
+      </div>`;
+    });
+  }
 
   if (pending.length) {
     html += `<div class="friend-section-label">Requests for you</div>`;
@@ -2676,6 +2865,9 @@ function buildPlayerCardHtml(p, activityItems) {
     friendAction = `<button class="friend-btn primary" style="flex:1;" onclick="sendFriendRequest('${p.id}');closeProfile();">Add friend</button>`;
   } else if (fs.status === 'accepted') {
     friendAction = `<span style="font-size:12px;color:var(--ink3);font-weight:600;flex:1;text-align:center;padding:8px 0;">Friends ✓</span><button class="friend-btn outline" onclick="friendAction('remove','${fs.id}');closeProfile();">Remove</button>`;
+    // Add invite button separately so it sits in its own row
+    friendAction = `<button class="friend-btn primary" style="flex:1;" onclick="closeProfile();openInviteSheet('${p.id}','${(p.full_name||'').replace(/'/g,"\\'")}');">Invite to hit</button>` +
+      `<button class="friend-btn outline" onclick="friendAction('remove','${fs.id}');closeProfile();">Remove</button>`;
   } else if (fs.status === 'pending' && fs.iRequested) {
     friendAction = `<span style="font-size:12px;color:var(--ink3);font-weight:600;flex:1;text-align:center;padding:8px 0;">Request sent</span><button class="friend-btn outline" onclick="friendAction('cancel','${fs.id}');closeProfile();">Cancel</button>`;
   } else if (fs.status === 'pending') {
@@ -2696,9 +2888,9 @@ function buildPlayerCardHtml(p, activityItems) {
       ${activitySection}
       ${noPublicInfo ? `<div style="font-size:13px;color:var(--ink3);text-align:center;padding:16px 0;">No public information shared.</div>` : ''}
       ${friendAction ? `<div class="player-card-friend-row">${friendAction}</div>` : ''}
-      <button disabled style="width:100%;background:var(--page);border:1.5px solid var(--border);border-radius:var(--r);padding:10px;font-family:var(--font);font-size:12px;font-weight:500;color:var(--ink4);margin-top:6px;cursor:default;opacity:.6;">Invite to hit — coming soon</button>
+
       <button onclick="closeProfile()" style="width:100%;background:var(--page);border:1.5px solid var(--border);border-radius:var(--r);padding:11px;font-family:var(--font);font-size:13px;font-weight:600;cursor:pointer;color:var(--ink2);margin-top:6px;">Close</button>
-    </div>\``;
+    </div>`;
 }
 
 async function openPlayerProfile(id) {
@@ -3432,7 +3624,7 @@ async function initializeApp() {
 
   // Step 5: Load all app data (matches, practices, insights)
   hideLoading();
-  await Promise.all([loadAppData(), loadActivityPrivacy().catch(()=>{}), loadFriendships().catch(()=>{})]);
+  await Promise.all([loadAppData(), loadActivityPrivacy().catch(()=>{}), loadFriendships().catch(()=>{}), loadHitInvites().catch(()=>{})]);
   console.log('[Courtside] initializeApp complete');
 }
 
