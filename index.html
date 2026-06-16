@@ -414,10 +414,10 @@ html, body { height: 100%; font-family: var(--font); background: var(--page); co
 .feed-card { display: flex; align-items: flex-start; gap: 10px; padding: 10px 0; border-bottom: 1px solid var(--border); }
 .feed-card:last-child { border-bottom: none; }
 .feed-av-wrap { position: relative; flex-shrink: 0; }
-.feed-badge { position: absolute; bottom: -2px; right: -2px; width: 18px; height: 18px; border-radius: 50%; border: 2px solid var(--surface); display: flex; align-items: center; justify-content: center; font-size: 9px; line-height: 1; }
-.feed-badge.win  { background: #27ae60; color: #fff; }
-.feed-badge.match { background: var(--season-bg1); color: #fff; }
-.feed-badge.prac { background: #5b8fd4; color: #fff; }
+.feed-badge { position: absolute; bottom: -3px; right: -3px; width: 20px; height: 20px; border-radius: 50%; border: 2.5px solid var(--surface); display: flex; align-items: center; justify-content: center; font-size: 10px; line-height: 1; }
+.feed-badge.win   { background: #f0a500; color: #fff; }
+.feed-badge.match { background: var(--season-bg1); color: #fff; font-size: 9px; }
+.feed-badge.prac  { background: rgba(91,143,212,0.22); border-color: var(--surface); width: 14px; height: 14px; bottom: 0; right: 0; font-size: 7px; color: #5b8fd4; }
 .feed-body { flex: 1; min-width: 0; padding-top: 1px; }
 .feed-name { font-size: 13px; font-weight: 700; color: var(--ink); line-height: 1.3; }
 .feed-summary { font-size: 12px; color: var(--ink2); margin-top: 1px; line-height: 1.4; }
@@ -2116,11 +2116,10 @@ function feedCounts(items) {
 }
 
 function feedBadge(counts) {
-  // Badge reflects match activity first; practice only if no matches
-  const hasMatch = counts.won + counts.played > 0;
-  if (counts.won > 0) return { cls: 'win',   icon: '🏆' };
-  if (hasMatch)       return { cls: 'match',  icon: '🎾' };
-  return               { cls: 'prac',  icon: '◉'  };
+  // Win: gold trophy. Match played: tennis ball. Practice only: small dot.
+  if (counts.won > 0) return { cls: 'win',   icon: '▲' };  // trophy silhouette — crisp at small size
+  if (counts.won + counts.played > 0) return { cls: 'match', icon: '●' };
+  return { cls: 'prac', icon: '·' };
 }
 
 function feedPrimary(counts, periodLabel) {
@@ -2187,7 +2186,7 @@ function feedExpandedRows(friendItems) {
     sections[key].forEach(it => {
       const type = feedSummaryType(it);
       const badgeCls = type === 'won' ? 'win' : type === 'practice' ? 'prac' : 'match';
-      const icon = type === 'won' ? '🏆' : type === 'practice' ? '◉' : '🎾';
+      const icon = type === 'won' ? '▲' : type === 'practice' ? '·' : '●';
       const summary = type === 'won' ? 'Won a match' : type === 'practice' ? 'Had a practice' : 'Played a match';
       const scoreHtml = it.score ? `<span class="feed-score" style="margin-left:6px;">${formatScore({ score: it.score })}</span>` : '';
       html += `<div style="display:flex;align-items:center;gap:8px;padding:5px 0;border-bottom:1px solid var(--border);">
@@ -2239,19 +2238,19 @@ async function renderFeed(el) {
           ? `<div style="border-top:1px solid var(--border);margin-top:8px;padding-top:2px;">${feedExpandedRows(items)}</div>`
           : '';
 
+        const statsAndPeriod = [stats, period].filter(Boolean).join('  ·  ');
         html += `<div class="feed-card" style="align-items:flex-start;flex-direction:column;padding:12px 0;cursor:pointer;" onclick="toggleFeedCard('${fid}')">
-          <div style="display:flex;align-items:center;gap:10px;width:100%;">
-            <div class="feed-av-wrap" style="flex-shrink:0;">
+          <div style="display:flex;align-items:flex-start;gap:10px;width:100%;">
+            <div class="feed-av-wrap" style="flex-shrink:0;margin-top:1px;">
               ${feedAvatarHtml(latest)}
               <div class="feed-badge ${badge.cls}">${badge.icon}</div>
             </div>
             <div class="feed-body" style="flex:1;min-width:0;">
               <div class="feed-name">${latest.display_name || '—'}</div>
               <div class="feed-summary">${primary}</div>
-              ${stats ? `<div style="font-size:11px;color:var(--ink3);margin-top:2px;">${stats}</div>` : ''}
-              <div style="font-size:11px;color:var(--season-bg1);font-weight:600;margin-top:4px;">View activity ›</div>
+              <div style="font-size:11px;color:var(--ink3);margin-top:3px;">${statsAndPeriod}</div>
+              <div style="font-size:11px;color:var(--season-bg1);font-weight:600;margin-top:5px;">View activity ›</div>
             </div>
-            <div style="font-size:11px;color:var(--ink4);flex-shrink:0;text-align:right;padding-top:1px;">${period}</div>
           </div>
           ${expandedHtml}
         </div>`;
