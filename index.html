@@ -401,13 +401,19 @@ html, body { height: 100%; font-family: var(--font); background: var(--page); co
 .club-tab.on { background: var(--season-bg1); color: #fff; }
 
 /* ── Feed cards ── */
-.feed-card { display: flex; align-items: center; gap: 11px; padding: 11px 0; border-bottom: 1px solid var(--border); }
+.feed-group-label { font-size: 10px; font-weight: 700; letter-spacing: .6px; text-transform: uppercase; color: var(--ink4); padding: 14px 0 6px; }
+.feed-card { display: flex; align-items: flex-start; gap: 10px; padding: 10px 0; border-bottom: 1px solid var(--border); }
 .feed-card:last-child { border-bottom: none; }
-.feed-body { flex: 1; min-width: 0; }
-.feed-name { font-size: 13px; font-weight: 700; color: var(--ink); }
-.feed-summary { font-size: 12px; color: var(--ink2); margin-top: 1px; }
-.feed-score { font-size: 11px; color: var(--ink3); margin-top: 1px; }
-.feed-date { font-size: 11px; color: var(--ink4); flex-shrink: 0; }
+.feed-av-wrap { position: relative; flex-shrink: 0; }
+.feed-badge { position: absolute; bottom: -2px; right: -2px; width: 16px; height: 16px; border-radius: 50%; border: 2px solid var(--surface); display: flex; align-items: center; justify-content: center; font-size: 8px; }
+.feed-badge.win  { background: #27ae60; }
+.feed-badge.loss { background: var(--season-bg1); }
+.feed-badge.prac { background: #5b8fd4; }
+.feed-body { flex: 1; min-width: 0; padding-top: 1px; }
+.feed-name { font-size: 13px; font-weight: 700; color: var(--ink); line-height: 1.3; }
+.feed-summary { font-size: 12px; color: var(--ink2); margin-top: 1px; line-height: 1.4; }
+.feed-score { display: inline-block; font-size: 11px; font-weight: 600; color: var(--ink3); background: var(--page); border-radius: 6px; padding: 1px 7px; margin-top: 4px; border: 1px solid var(--border); }
+.feed-date { font-size: 11px; color: var(--ink4); flex-shrink: 0; padding-top: 2px; white-space: nowrap; }
 
 /* ── Friend action buttons ── */
 .friend-btn { font-size: 12px; font-weight: 600; border-radius: 20px; padding: 5px 13px; border: none; cursor: pointer; font-family: var(--font); white-space: nowrap; }
@@ -2046,40 +2052,106 @@ async function setClubTab(tab, skipRender = false) {
 }
 
 // ── Feed ─────────────────────────────────────────────────────────────────────
+// ── Feed helpers ──────────────────────────────────────────────────────────────
+function feedDateLabel(dateStr) {
+  if (!dateStr) return '';
+  const d = new Date(dateStr + 'T12:00:00');
+  const now = new Date();
+  const todayStart = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+  const diff = Math.floor((todayStart - new Date(d.getFullYear(), d.getMonth(), d.getDate())) / 864e5);
+  if (diff === 0) return 'Today';
+  if (diff === 1) return 'Yesterday';
+  if (diff < 7) return 'This week';
+  if (diff < 14) return 'Last week';
+  return d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+}
+
+function feedGroupKey(dateStr) {
+  if (!dateStr) return 'Earlier';
+  const d = new Date(dateStr + 'T12:00:00');
+  const now = new Date();
+  const todayStart = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+  const diff = Math.floor((todayStart - new Date(d.getFullYear(), d.getMonth(), d.getDate())) / 864e5);
+  if (diff === 0) return 'Today';
+  if (diff === 1) return 'Yesterday';
+  if (diff < 7) return 'This week';
+  if (diff < 14) return 'Last week';
+  return 'Earlier';
+}
+
+function feedItemBadge(item) {
+  if (item.activity_type !== 'match') return { cls: 'prac', icon: '●' };
+  if (item.summary && item.summary.startsWith('won')) return { cls: 'win', icon: '✓' };
+  return { cls: 'loss', icon: '●' };
+}
+
+function feedItemSummary(item) {
+  const s = item.summary || '';
+  if (s === 'won a match') return 'Won a match';
+  if (s === 'lost a match') return 'Played a match';
+  if (s === 'logged a match') return 'Played a match';
+  if (s === 'logged a practice') return 'Had a practice';
+  return s.charAt(0).toUpperCase() + s.slice(1);
+}
+
+function feedAvatarHtml(item) {
+  const ini = (item.display_name || '?').split(' ').map(w => w[0]).join('').slice(0,2).toUpperCase();
+  const bg = 'var(--season-bg1)';
+  const sz = 'width:36px;height:36px;border-radius:50%;';
+  if (item.avatar_url) {
+    return `<div style="${sz}overflow:hidden;position:relative;">` +
+      `<img src="${item.avatar_url}" style="width:100%;height:100%;object-fit:cover;display:block;" ` +
+      `onerror="this.style.display='none';this.nextElementSibling.style.display='flex'">` +
+      `<div style="display:none;${sz}background:${bg};color:#fff;align-items:center;justify-content:center;font-size:12px;font-weight:800;position:absolute;inset:0;">${ini}</div>` +
+      `</div>`;
+  }
+  return `<div style="${sz}background:${bg};color:#fff;display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:800;">${ini}</div>`;
+}
+
 async function renderFeed(el) {
-  el.innerHTML = '<div class="club-empty">Loading feed…</div>';
+  el.innerHTML = '<div class="club-empty" style="padding:24px 0;">Loading feed…</div>';
   try {
     const res = await sbFetch('/rest/v1/rpc/get_friend_feed', 'POST', {});
-    const items = Array.isArray(res) ? res : [];
+    const items = Array.isArray(res) ? res.slice(0, 20) : [];
     if (!items.length) {
-      el.innerHTML = '<div class="club-empty"><div class="club-empty-title">No activity yet</div><div>Add friends to see their activity here.</div></div>';
+      el.innerHTML = '<div class="club-empty"><div class="club-empty-title">No friend activity yet</div><div>Add players from the Directory or log a session to get started.</div></div>';
       return;
     }
-    el.innerHTML = items.map(item => {
-      const ini = (item.display_name || '?').split(' ').map(w => w[0]).join('').slice(0,2).toUpperCase();
-      const avStyle = 'width:34px;height:34px;border-radius:50%;flex-shrink:0;';
-    const iniDiv = `<div style="${avStyle}background:var(--season-bg1);color:#fff;display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:800;">${ini}</div>`;
-    const av = item.avatar_url
-      ? `<div style="${avStyle}overflow:hidden;position:relative;">` +
-        `<img src="${item.avatar_url}" style="width:100%;height:100%;object-fit:cover;display:block;" ` +
-        `onerror="this.style.display='none';this.nextElementSibling.style.display='flex'">` +
-        `<div style="display:none;${avStyle}background:var(--season-bg1);color:#fff;align-items:center;justify-content:center;font-size:12px;font-weight:800;position:absolute;inset:0;">${ini}</div>` +
-        `</div>`
-      : iniDiv;
-      const scoreText = item.score ? `<div class="feed-score">${formatScore({score: item.score})}</div>` : '';
-      const dateStr = item.activity_date ? formatDate(item.activity_date) : '';
-      return `<div class="feed-card">
-        ${av}
-        <div class="feed-body">
-          <div class="feed-name">${item.display_name || '—'}</div>
-          <div class="feed-summary">${item.summary || (item.activity_type === 'match' ? 'logged a match' : 'logged a practice')}</div>
-          ${scoreText}
-        </div>
-        <div class="feed-date">${dateStr}</div>
-      </div>`;
-    }).join('');
+
+    // Group by date bucket
+    const groups = {};
+    const groupOrder = [];
+    items.forEach(item => {
+      const key = feedGroupKey(item.activity_date);
+      if (!groups[key]) { groups[key] = []; groupOrder.push(key); }
+      groups[key].push(item);
+    });
+
+    let html = '';
+    groupOrder.forEach(key => {
+      html += `<div class="feed-group-label">${key}</div>`;
+      html += groups[key].map(item => {
+        const badge = feedItemBadge(item);
+        const summary = feedItemSummary(item);
+        const score = item.score ? `<span class="feed-score">${formatScore({score: item.score})}</span>` : '';
+        const av = feedAvatarHtml(item);
+        return `<div class="feed-card">
+          <div class="feed-av-wrap">
+            ${av}
+            <div class="feed-badge ${badge.cls}">${badge.icon}</div>
+          </div>
+          <div class="feed-body">
+            <div class="feed-name">${item.display_name || '—'}</div>
+            <div class="feed-summary">${summary}${score ? ' ' + score : ''}</div>
+          </div>
+          <div class="feed-date">${feedDateLabel(item.activity_date)}</div>
+        </div>`;
+      }).join('');
+    });
+
+    el.innerHTML = html;
   } catch(e) {
-    el.innerHTML = `<div class="club-empty" style="color:#e74c3c;">Could not load feed: ${e.message}<br><button onclick="setClubTab('feed')" style="margin-top:10px;background:var(--season-bg1);color:#fff;border:none;border-radius:var(--r);padding:8px 16px;font-family:var(--font);font-size:12px;font-weight:600;cursor:pointer;">↻ Retry</button></div>`;
+    el.innerHTML = `<div class="club-empty"><div style="color:#e74c3c;margin-bottom:12px;font-size:13px;">Could not load feed.</div><button onclick="setClubTab('feed')" style="background:var(--season-bg1);color:#fff;border:none;border-radius:var(--r);padding:8px 16px;font-family:var(--font);font-size:12px;font-weight:600;cursor:pointer;">↻ Retry</button></div>`;
   }
 }
 
