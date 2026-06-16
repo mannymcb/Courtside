@@ -2079,21 +2079,6 @@ function feedGroupKey(dateStr) {
   return 'Earlier';
 }
 
-function feedItemBadge(item) {
-  if (item.activity_type !== 'match') return { cls: 'prac', icon: '●' };
-  if (item.summary && item.summary.startsWith('won')) return { cls: 'win', icon: '✓' };
-  return { cls: 'loss', icon: '●' };
-}
-
-function feedItemSummary(item) {
-  const s = item.summary || '';
-  if (s === 'won a match') return 'Won a match';
-  if (s === 'lost a match') return 'Played a match';
-  if (s === 'logged a match') return 'Played a match';
-  if (s === 'logged a practice') return 'Had a practice';
-  return s.charAt(0).toUpperCase() + s.slice(1);
-}
-
 function feedAvatarHtml(item) {
   const ini = (item.display_name || '?').split(' ').map(w => w[0]).join('').slice(0,2).toUpperCase();
   const bg = 'var(--season-bg1)';
@@ -2108,41 +2093,91 @@ function feedAvatarHtml(item) {
   return `<div style="${sz}background:${bg};color:#fff;display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:800;">${ini}</div>`;
 }
 
+function feedCollapse(items) {
+  // Group by friend_id + dateGroup + summaryType
+  // summaryType: 'won' | 'played' | 'practice'
+  const summaryType = s => {
+    if (!s) return 'played';
+    if (s.startsWith('won')) return 'won';
+    if (s === 'logged a practice') return 'practice';
+    return 'played';
+  };
+
+  const buckets = {};
+  items.forEach(item => {
+    const dateGrp = feedGroupKey(item.activity_date);
+    const type = item.activity_type === 'practice' ? 'practice' : summaryType((item.summary || '').toLowerCase());
+    const key = `${item.friend_id}|${dateGrp}|${type}`;
+    if (!buckets[key]) buckets[key] = { item, type, dateGrp, count: 0, scores: [] };
+    buckets[key].count++;
+    if (item.score) buckets[key].scores.push(item.score);
+  });
+
+  return Object.values(buckets);
+}
+
+function feedGroupedSummary(type, count) {
+  if (type === 'won')      return count === 1 ? 'Won a match'    : `Won ${count} matches`;
+  if (type === 'played')   return count === 1 ? 'Played a match' : `Played ${count} matches`;
+  if (type === 'practice') return count === 1 ? 'Had a practice' : `Had ${count} practices`;
+  return 'Logged activity';
+}
+
+function feedBadgeCls(type) {
+  if (type === 'won')      return 'win';
+  if (type === 'practice') return 'prac';
+  return 'loss';
+}
+
 async function renderFeed(el) {
   el.innerHTML = '<div class="club-empty" style="padding:24px 0;">Loading feed…</div>';
   try {
     const res = await sbFetch('/rest/v1/rpc/get_friend_feed', 'POST', {});
-    const items = Array.isArray(res) ? res.slice(0, 20) : [];
-    if (!items.length) {
+    const raw = Array.isArray(res) ? res.slice(0, 20) : [];
+    if (!raw.length) {
       el.innerHTML = '<div class="club-empty"><div class="club-empty-title">No friend activity yet</div><div>Add players from the Directory or log a session to get started.</div></div>';
       return;
     }
 
-    // Group by date bucket
-    const groups = {};
-    const groupOrder = [];
-    items.forEach(item => {
-      const key = feedGroupKey(item.activity_date);
-      if (!groups[key]) { groups[key] = []; groupOrder.push(key); }
-      groups[key].push(item);
+    const collapsed = feedCollapse(raw);
+
+    // Sort collapsed buckets by dateGroup priority then by original item date
+    const groupPriority = { 'Today': 0, 'Yesterday': 1, 'This week': 2, 'Last week': 3, 'Earlier': 4 };
+    collapsed.sort((a, b) => {
+      const gd = (groupPriority[a.dateGrp] ?? 5) - (groupPriority[b.dateGrp] ?? 5);
+      if (gd !== 0) return gd;
+      return (b.item.activity_date || '').localeCompare(a.item.activity_date || '');
+    });
+
+    // Re-group into date sections
+    const sections = {};
+    const sectionOrder = [];
+    collapsed.forEach(b => {
+      if (!sections[b.dateGrp]) { sections[b.dateGrp] = []; sectionOrder.push(b.dateGrp); }
+      sections[b.dateGrp].push(b);
     });
 
     let html = '';
-    groupOrder.forEach(key => {
+    sectionOrder.forEach(key => {
       html += `<div class="feed-group-label">${key}</div>`;
-      html += groups[key].map(item => {
-        const badge = feedItemBadge(item);
-        const summary = feedItemSummary(item);
-        const score = item.score ? `<span class="feed-score">${formatScore({score: item.score})}</span>` : '';
+      html += sections[key].map(b => {
+        const { item, type, count, scores } = b;
+        const summary = feedGroupedSummary(type, count);
+        const badgeCls = feedBadgeCls(type);
+        const badgeIcon = type === 'won' ? '✓' : '●';
+        // Only show score for single-item rows with a score
+        const scoreHtml = count === 1 && scores.length && scores[0]
+          ? `<span class="feed-score">${formatScore({ score: scores[0] })}</span>`
+          : '';
         const av = feedAvatarHtml(item);
         return `<div class="feed-card">
           <div class="feed-av-wrap">
             ${av}
-            <div class="feed-badge ${badge.cls}">${badge.icon}</div>
+            <div class="feed-badge ${badgeCls}">${badgeIcon}</div>
           </div>
           <div class="feed-body">
             <div class="feed-name">${item.display_name || '—'}</div>
-            <div class="feed-summary">${summary}${score ? ' ' + score : ''}</div>
+            <div class="feed-summary">${summary}${scoreHtml ? ' ' + scoreHtml : ''}</div>
           </div>
           <div class="feed-date">${feedDateLabel(item.activity_date)}</div>
         </div>`;
