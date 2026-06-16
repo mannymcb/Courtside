@@ -1038,6 +1038,8 @@ async function fetchAndRouteProfile() {
       showScreen('app-shell');
       updateHero();
       await loadAppData();
+      loadFriendships().catch(()=>{});
+      loadActivityPrivacy().catch(()=>{});
     } else {
       // No profile or incomplete — show setup
       hideLoading();
@@ -2055,9 +2057,15 @@ async function renderFeed(el) {
     }
     el.innerHTML = items.map(item => {
       const ini = (item.display_name || '?').split(' ').map(w => w[0]).join('').slice(0,2).toUpperCase();
-      const av = item.avatar_url
-        ? `<div style="width:34px;height:34px;border-radius:50%;overflow:hidden;flex-shrink:0;"><img src="${item.avatar_url}" style="width:100%;height:100%;object-fit:cover;" onerror="this.parentElement.innerHTML='<div style=&quot;width:34px;height:34px;border-radius:50%;background:var(--season-bg1);color:#fff;display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:800;&quot;>${ini}</div>'"></div>`
-        : `<div style="width:34px;height:34px;border-radius:50%;background:var(--season-bg1);color:#fff;display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:800;flex-shrink:0;">${ini}</div>`;
+      const avStyle = 'width:34px;height:34px;border-radius:50%;flex-shrink:0;';
+    const iniDiv = `<div style="${avStyle}background:var(--season-bg1);color:#fff;display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:800;">${ini}</div>`;
+    const av = item.avatar_url
+      ? `<div style="${avStyle}overflow:hidden;position:relative;">` +
+        `<img src="${item.avatar_url}" style="width:100%;height:100%;object-fit:cover;display:block;" ` +
+        `onerror="this.style.display='none';this.nextElementSibling.style.display='flex'">` +
+        `<div style="display:none;${avStyle}background:var(--season-bg1);color:#fff;align-items:center;justify-content:center;font-size:12px;font-weight:800;position:absolute;inset:0;">${ini}</div>` +
+        `</div>`
+      : iniDiv;
       const scoreText = item.score ? `<div class="feed-score">${formatScore({score: item.score})}</div>` : '';
       const dateStr = item.activity_date ? formatDate(item.activity_date) : '';
       return `<div class="feed-card">
@@ -2078,6 +2086,7 @@ async function renderFeed(el) {
 // ── Directory ─────────────────────────────────────────────────────────────────
 async function renderDirectory(el) {
   el.innerHTML = `<input type="search" class="club-search" id="club-search-input" placeholder="Search players…" oninput="filterPlayers(this.value)"><div id="club-player-list"><div class="club-empty">Loading players…</div></div>`;
+  await loadFriendships().catch(()=>{});
   const clubId = profile?.club_id;
   if (clubId) await loadClubPlayers(clubId);
 }
@@ -2109,9 +2118,16 @@ async function renderFriends(el) {
   function friendRow(f, otherId, actions) {
     const p = friendProfiles[otherId] || {};
     const ini = (p.full_name || '?').split(' ').map(w => w[0]).join('').slice(0,2).toUpperCase();
+    const pBg = p.avatar_color || 'var(--season-bg1)';
+    const pFg = p.avatar_text_color || '#fff';
+    const pStyle = 'width:34px;height:34px;border-radius:50%;flex-shrink:0;';
     const av = p.avatar_url
-      ? `<div style="width:34px;height:34px;border-radius:50%;overflow:hidden;flex-shrink:0;"><img src="${p.avatar_url}" style="width:100%;height:100%;object-fit:cover;"></div>`
-      : `<div style="width:34px;height:34px;border-radius:50%;background:${p.avatar_color||'var(--season-bg1)'};color:${p.avatar_text_color||'#fff'};display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:800;flex-shrink:0;">${ini}</div>`;
+      ? `<div style="${pStyle}overflow:hidden;position:relative;">` +
+        `<img src="${p.avatar_url}" style="width:100%;height:100%;object-fit:cover;display:block;" ` +
+        `onerror="this.style.display='none';this.nextElementSibling.style.display='flex'">` +
+        `<div style="display:none;${pStyle}background:${pBg};color:${pFg};align-items:center;justify-content:center;font-size:12px;font-weight:800;position:absolute;inset:0;">${ini}</div>` +
+        `</div>`
+      : `<div style="${pStyle}background:${pBg};color:${pFg};display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:800;">${ini}</div>`;
     const meta = p.show_usta_rating && p.usta_rating ? `USTA ${p.usta_rating}` : '';
     return `<div class="friend-row">
       ${av}
@@ -2193,13 +2209,48 @@ async function sendFriendRequest(addresseeId) {
 }
 
 function friendshipStatus(otherId) {
-  const myId = profile.id;
+  // Use string comparison — UUIDs from Supabase are strings
+  const myId = String(profile.id);
+  const other = String(otherId);
   const f = myFriendships.find(x =>
-    (x.user_a === myId && x.user_b === otherId) ||
-    (x.user_b === myId && x.user_a === otherId)
+    (String(x.user_a) === myId && String(x.user_b) === other) ||
+    (String(x.user_b) === myId && String(x.user_a) === other)
   );
   if (!f) return null;
-  return { status: f.status, id: f.id, iRequested: f.requester_id === myId };
+  const iRequested = String(f.requester_id) === myId;
+  console.log('[Courtside] friendshipStatus', other, '->', f.status, 'iRequested:', iRequested);
+  return { status: f.status, id: f.id, iRequested };
+}
+
+async function loadFriendships() {
+  if (!profile?.id) return;
+  try {
+    // Fetch all rows where I am user_a OR user_b
+    const rows = await sbFetch(
+      `/rest/v1/friendships?or=(user_a.eq.${profile.id},user_b.eq.${profile.id})&select=*`
+    );
+    myFriendships = Array.isArray(rows) ? rows : [];
+    console.log('[Courtside] friendships loaded:', myFriendships.length, myFriendships);
+  } catch(e) {
+    console.warn('[Courtside] friendships load failed:', e.message);
+    myFriendships = [];
+  }
+}
+
+async function loadActivityPrivacy() {
+  if (!profile?.id) return;
+  try {
+    const rows = await sbFetch(
+      `/rest/v1/activity_privacy?user_id=eq.${profile.id}&select=*&limit=1`
+    );
+    activityPrivacy = Array.isArray(rows) && rows.length
+      ? rows[0]
+      : { share_activity: true, share_result: true, share_score: false };
+    console.log('[Courtside] activity privacy loaded:', activityPrivacy);
+  } catch(e) {
+    console.warn('[Courtside] activity privacy load failed:', e.message);
+    activityPrivacy = { share_activity: true, share_result: true, share_score: false };
+  }
 }
 
 async function saveClubFromInline() {
@@ -2244,10 +2295,16 @@ function avatarEl(p, size='sm') {
   const fg = p.avatar_text_color || '#fff';
   const sz = size === 'lg' ? '64px' : '34px';
   const fs = size === 'lg' ? '22px' : '12px';
+  const initials = `<div style="width:${sz};height:${sz};border-radius:50%;background:${bg};color:${fg};display:flex;align-items:center;justify-content:center;font-size:${fs};font-weight:800;flex-shrink:0;">${ini}</div>`;
   if (p.avatar_url) {
-    return `<div style="width:${sz};height:${sz};border-radius:50%;overflow:hidden;flex-shrink:0;"><img src="${p.avatar_url}" style="width:100%;height:100%;object-fit:cover;" onerror="this.parentElement.innerHTML='<div style=\"width:${sz};height:${sz};border-radius:50%;background:${bg};color:${fg};display:flex;align-items:center;justify-content:center;font-size:${fs};font-weight:800;\">${ini}</div>'"></div>`;
+    // Wrap in a relative div; on error hide img and show initials sibling
+    return `<div style="width:${sz};height:${sz};border-radius:50%;overflow:hidden;flex-shrink:0;position:relative;">` +
+      `<img src="${p.avatar_url}" style="width:100%;height:100%;object-fit:cover;display:block;" ` +
+      `onerror="this.style.display='none';this.nextElementSibling.style.display='flex'">` +
+      `<div style="display:none;width:${sz};height:${sz};border-radius:50%;background:${bg};color:${fg};align-items:center;justify-content:center;font-size:${fs};font-weight:800;position:absolute;inset:0;">${ini}</div>` +
+      `</div>`;
   }
-  return `<div style="width:${sz};height:${sz};border-radius:50%;background:${bg};color:${fg};display:flex;align-items:center;justify-content:center;font-size:${fs};font-weight:800;flex-shrink:0;">${ini}</div>`;
+  return initials;
 }
 
 function renderPlayerList(players) {
