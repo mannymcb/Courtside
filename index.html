@@ -3113,13 +3113,10 @@ function weekBundleSummary(entries) {
   if (practices.length) parts.push(practices.length === 1 ? '1 practice' : `${practices.length} practices`);
   const headline = parts.join(' · ') || `${entries.length} sessions`;
 
-  // sub: wins/losses
+  // sub: record for weeks with matches only
   let sub = '';
   if (matches.length) {
-    sub = wins === matches.length ? `${wins}–0` :
-          losses === matches.length ? `0–${losses}` :
-          `${wins}–${losses}`;
-    sub = `W–L: ${sub}`;
+    sub = `${wins}–${losses} record`;
   }
 
   // focus chips: top 3 across all entries
@@ -3138,7 +3135,7 @@ function renderWeekBundle(bundle, isOpen) {
   const focusChips = s.topFocus.length
     ? `<div class="week-bundle-chips">${s.topFocus.map(f => `<span class="week-bundle-chip">${f}</span>`).join('')}</div>`
     : '';
-  const subLine = [s.sub, entries.length > 1 ? `${s.total} sessions` : null].filter(Boolean).join('  ·  ');
+  const subLine = s.sub || '';
   const entryHtml = entries.map(e => `<div style="padding:6px 0;">${entryCard(e)}</div>`).join('');
 
   return `<div class="week-bundle${openCls}" id="wb-${weekStart}">
