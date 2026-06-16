@@ -410,19 +410,32 @@ html, body { height: 100%; font-family: var(--font); background: var(--page); co
 .club-tab.on { background: var(--season-bg1); color: #fff; }
 
 /* ── Feed cards ── */
-.feed-group-label { font-size: 10px; font-weight: 700; letter-spacing: .6px; text-transform: uppercase; color: var(--ink4); padding: 14px 0 6px; }
-.feed-card { display: flex; align-items: flex-start; gap: 10px; padding: 10px 0; border-bottom: 1px solid var(--border); }
-.feed-card:last-child { border-bottom: none; }
+/* ── Feed cards — premium social treatment ── */
+.feed-card { background: var(--surface); border-radius: var(--r); border: 1px solid var(--border); margin-bottom: 10px; padding: 14px 15px; box-shadow: 0 1px 4px rgba(0,0,0,.06); cursor: pointer; transition: box-shadow .15s; }
+.feed-card:last-child { margin-bottom: 0; }
+.feed-card:active { box-shadow: 0 1px 2px rgba(0,0,0,.04); }
 .feed-av-wrap { position: relative; flex-shrink: 0; }
-.feed-badge { position: absolute; bottom: -3px; right: -3px; width: 20px; height: 20px; border-radius: 50%; border: 2.5px solid var(--surface); display: flex; align-items: center; justify-content: center; font-size: 10px; line-height: 1; }
-.feed-badge.win   { background: #f0a500; color: #fff; }
-.feed-badge.match { background: var(--season-bg1); color: #fff; font-size: 9px; }
-.feed-badge.prac  { background: rgba(91,143,212,0.22); border-color: var(--surface); width: 14px; height: 14px; bottom: 0; right: 0; font-size: 7px; color: #5b8fd4; }
-.feed-body { flex: 1; min-width: 0; padding-top: 1px; }
-.feed-name { font-size: 13px; font-weight: 700; color: var(--ink); line-height: 1.3; }
-.feed-summary { font-size: 12px; color: var(--ink2); margin-top: 1px; line-height: 1.4; }
-.feed-score { display: inline-block; font-size: 11px; font-weight: 600; color: var(--ink3); background: var(--page); border-radius: 6px; padding: 1px 7px; margin-top: 4px; border: 1px solid var(--border); }
-.feed-date { font-size: 11px; color: var(--ink4); flex-shrink: 0; padding-top: 2px; white-space: nowrap; }
+/* Status pill — sits inline, not tiny badge ── */
+.feed-status-pill { display: inline-flex; align-items: center; gap: 4px; border-radius: 20px; padding: 2px 9px 2px 6px; font-size: 11px; font-weight: 700; line-height: 1.6; }
+.feed-status-pill.win   { background: #fef3d0; color: #9a6200; }
+.feed-status-pill.match { background: rgba(200,230,58,.15); color: var(--season-bg2); }
+.feed-status-pill.prac  { background: rgba(91,143,212,.1); color: #3a72b8; }
+.feed-status-dot { width: 7px; height: 7px; border-radius: 50%; flex-shrink: 0; }
+.feed-status-pill.win   .feed-status-dot { background: #d4900a; }
+.feed-status-pill.match .feed-status-dot { background: var(--season-bg1); }
+.feed-status-pill.prac  .feed-status-dot { background: #5b8fd4; }
+/* Period chip ── */
+.feed-period-chip { display: inline-block; font-size: 10px; font-weight: 600; color: var(--ink4); background: var(--page); border: 1px solid var(--border); border-radius: 8px; padding: 1px 7px; white-space: nowrap; }
+/* Expanded rows ── */
+.feed-expanded { border-top: 1px solid var(--border); margin-top: 12px; padding-top: 10px; }
+.feed-exp-section { font-size: 10px; font-weight: 700; letter-spacing: .5px; text-transform: uppercase; color: var(--ink4); padding: 4px 0 6px; }
+.feed-exp-row { display: flex; align-items: center; gap: 8px; padding: 5px 0; border-bottom: 1px solid var(--border); }
+.feed-exp-row:last-child { border-bottom: none; }
+.feed-exp-icon { width: 22px; height: 22px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 10px; flex-shrink: 0; }
+.feed-exp-icon.win   { background: #fef3d0; color: #9a6200; }
+.feed-exp-icon.match { background: rgba(200,230,58,.15); color: var(--season-bg2); }
+.feed-exp-icon.prac  { background: rgba(91,143,212,.08); color: #5b8fd4; }
+.feed-score { display: inline-block; font-size: 11px; font-weight: 600; color: var(--ink3); background: var(--page); border-radius: 6px; padding: 1px 7px; margin-left: 5px; border: 1px solid var(--border); }
 
 /* ── Friend action buttons ── */
 .friend-btn { font-size: 12px; font-weight: 600; border-radius: 20px; padding: 5px 13px; border: none; cursor: pointer; font-family: var(--font); white-space: nowrap; }
@@ -2115,11 +2128,18 @@ function feedCounts(items) {
   return c;
 }
 
-function feedBadge(counts) {
-  // Win: gold trophy. Match played: tennis ball. Practice only: small dot.
-  if (counts.won > 0) return { cls: 'win',   icon: '▲' };  // trophy silhouette — crisp at small size
-  if (counts.won + counts.played > 0) return { cls: 'match', icon: '●' };
-  return { cls: 'prac', icon: '·' };
+function feedStatusPill(counts) {
+  // Returns {cls, label} for the inline status pill
+  if (counts.won > 0) {
+    const label = counts.won === 1 ? 'Win' : `${counts.won} Wins`;
+    return { cls: 'win', label };
+  }
+  const matches = counts.won + counts.played;
+  if (matches > 0) {
+    const label = matches === 1 ? 'Match' : `${matches} Matches`;
+    return { cls: 'match', label };
+  }
+  return { cls: 'prac', label: 'Practice' };
 }
 
 function feedPrimary(counts, periodLabel) {
@@ -2169,7 +2189,6 @@ function feedPeriodLabel(items) {
 }
 
 function feedExpandedRows(friendItems) {
-  // Group by date section
   const gPri = { Today: 0, Yesterday: 1, 'This week': 2, 'Last week': 3, Earlier: 4 };
   const sections = {};
   const order = [];
@@ -2180,22 +2199,25 @@ function feedExpandedRows(friendItems) {
   });
   order.sort((a, b) => (gPri[a] ?? 5) - (gPri[b] ?? 5));
 
-  let html = '';
+  let html = '<div class="feed-expanded">';
   order.forEach(key => {
-    html += `<div style="font-size:10px;font-weight:700;letter-spacing:.5px;text-transform:uppercase;color:var(--ink4);padding:8px 0 4px;">${key}</div>`;
+    html += `<div class="feed-exp-section">${key}</div>`;
     sections[key].forEach(it => {
       const type = feedSummaryType(it);
-      const badgeCls = type === 'won' ? 'win' : type === 'practice' ? 'prac' : 'match';
-      const icon = type === 'won' ? '▲' : type === 'practice' ? '·' : '●';
-      const summary = type === 'won' ? 'Won a match' : type === 'practice' ? 'Had a practice' : 'Played a match';
-      const scoreHtml = it.score ? `<span class="feed-score" style="margin-left:6px;">${formatScore({ score: it.score })}</span>` : '';
-      html += `<div style="display:flex;align-items:center;gap:8px;padding:5px 0;border-bottom:1px solid var(--border);">
-        <div class="feed-badge ${badgeCls}" style="position:static;width:18px;height:18px;border:none;flex-shrink:0;">${icon}</div>
-        <div style="flex:1;font-size:13px;color:var(--ink2);">${summary}${scoreHtml}</div>
+      const iconCls = type === 'won' ? 'win' : type === 'practice' ? 'prac' : 'match';
+      const iconChar = type === 'won' ? '▲' : type === 'practice' ? '◦' : '●';
+      const label = type === 'won' ? 'Won a match' : type === 'practice' ? 'Had a practice' : 'Played a match';
+      const scoreHtml = it.score ? `<span class="feed-score">${formatScore({ score: it.score })}</span>` : '';
+      // Practice rows are visually quieter
+      const rowStyle = type === 'practice' ? 'opacity:.75;' : '';
+      html += `<div class="feed-exp-row" style="${rowStyle}">
+        <div class="feed-exp-icon ${iconCls}">${iconChar}</div>
+        <div style="flex:1;font-size:13px;font-weight:${type==='won'?'600':'400'};color:${type==='practice'?'var(--ink3)':'var(--ink2)'};">${label}${scoreHtml}</div>
         <div style="font-size:11px;color:var(--ink4);">${feedDateLabel(it.activity_date)}</div>
       </div>`;
     });
   });
+  html += '</div>';
   return html;
 }
 
@@ -2232,24 +2254,26 @@ async function renderFeed(el) {
         const counts = feedCounts(items);
         const primary = feedPrimary(counts, period);
         const stats = feedStats(counts);
-        const badge = feedBadge(counts);
         const isOpen = feedExpandedId === fid;
-        const expandedHtml = isOpen
-          ? `<div style="border-top:1px solid var(--border);margin-top:8px;padding-top:2px;">${feedExpandedRows(items)}</div>`
-          : '';
+        const expandedHtml = isOpen ? feedExpandedRows(items) : '';
 
-        const statsAndPeriod = [stats, period].filter(Boolean).join('  ·  ');
-        html += `<div class="feed-card" style="align-items:flex-start;flex-direction:column;padding:12px 0;cursor:pointer;" onclick="toggleFeedCard('${fid}')">
-          <div style="display:flex;align-items:flex-start;gap:10px;width:100%;">
-            <div class="feed-av-wrap" style="flex-shrink:0;margin-top:1px;">
-              ${feedAvatarHtml(latest)}
-              <div class="feed-badge ${badge.cls}">${badge.icon}</div>
+        const pill = feedStatusPill(counts);
+        html += `<div class="feed-card" onclick="toggleFeedCard('${fid}')">
+          <div style="display:flex;align-items:center;gap:12px;">
+            <div class="feed-av-wrap">
+              ${feedAvatarHtml(latest, '44px', '14px')}
             </div>
-            <div class="feed-body" style="flex:1;min-width:0;">
-              <div class="feed-name">${latest.display_name || '—'}</div>
-              <div class="feed-summary">${primary}</div>
-              <div style="font-size:11px;color:var(--ink3);margin-top:3px;">${statsAndPeriod}</div>
-              <div style="font-size:11px;color:var(--season-bg1);font-weight:600;margin-top:5px;">View activity ›</div>
+            <div style="flex:1;min-width:0;">
+              <div style="display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:3px;">
+                <div style="font-size:14px;font-weight:700;color:var(--ink);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${latest.display_name || '—'}</div>
+                <span class="feed-period-chip">${period}</span>
+              </div>
+              <div style="display:flex;align-items:center;gap:7px;flex-wrap:wrap;">
+                <span class="feed-status-pill ${pill.cls}"><span class="feed-status-dot"></span>${pill.label}</span>
+                <span style="font-size:12px;font-weight:600;color:var(--ink2);">${primary}</span>
+              </div>
+              ${stats ? `<div style="font-size:11px;color:var(--ink3);margin-top:4px;">${stats}</div>` : ''}
+              <div style="font-size:11px;color:var(--season-bg1);font-weight:600;margin-top:6px;">Activity ›</div>
             </div>
           </div>
           ${expandedHtml}
