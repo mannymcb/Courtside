@@ -1605,20 +1605,38 @@ function markResponsesSeen(ids) {
   store('cs_seen_invite_responses', [...seen]);
 }
 
+function getRecentResponsesForSender(myId) {
+  // Responses to invites I sent, deduped by receiver (newest only), within 7 days
+  const cutoff = Date.now() - 7 * 24 * 60 * 60 * 1000;
+  const responded = hitInvites.filter(i =>
+    String(i.sender_id) === myId &&
+    ['accepted','maybe','declined'].includes(i.status)
+  );
+  // Sort newest first by updated_at
+  responded.sort((a, b) => new Date(b.updated_at || b.created_at) - new Date(a.updated_at || a.created_at));
+  // Dedupe: keep only the newest response per receiver_id
+  const byReceiver = new Map();
+  responded.forEach(inv => {
+    if (!byReceiver.has(inv.receiver_id)) byReceiver.set(inv.receiver_id, inv);
+  });
+  // Apply 7-day visibility window
+  return [...byReceiver.values()].filter(inv => {
+    const t = new Date(inv.updated_at || inv.created_at).getTime();
+    return t >= cutoff;
+  });
+}
+
 function computeClubAttentionCount() {
   if (!profile?.id) return 0;
   const myId = String(profile.id);
   const seen = getSeenResponseIds();
 
-  // 1. Incoming pending hit invites
+  // 1. Incoming pending hit invites (status must be exactly 'pending')
   const incomingPending = hitInvites.filter(i => i.status === 'pending' && String(i.receiver_id) === myId).length;
 
-  // 2. Outgoing invites that were responded to (accepted/maybe/declined) and not yet seen
-  const respondedUnseen = hitInvites.filter(i =>
-    String(i.sender_id) === myId &&
-    ['accepted','maybe','declined'].includes(i.status) &&
-    !seen.has(i.id)
-  ).length;
+  // 2. Recent (≤7 days), deduped responses to invites I sent, not yet seen
+  const recentResponses = getRecentResponsesForSender(myId);
+  const respondedUnseen = recentResponses.filter(i => !seen.has(i.id)).length;
 
   // 3. Incoming friend requests (pending, I'm not the requester)
   const incomingFriendReqs = myFriendships.filter(f =>
@@ -2557,24 +2575,25 @@ async function renderFriends(el) {
   await loadHitInvites();
   const myId = String(profile.id);
 
-  // Mark sender-side responded invites as seen once viewed here
-  const respondedIds = hitInvites
-    .filter(i => String(i.sender_id) === myId && ['accepted','maybe','declined'].includes(i.status))
-    .map(i => i.id);
-  if (respondedIds.length) markResponsesSeen(respondedIds);
-  updateClubNavDot();
-
   const pending = myFriendships.filter(f => f.status === 'pending' && String(f.requester_id) !== myId);
   const accepted = myFriendships.filter(f => f.status === 'accepted');
   const sent = myFriendships.filter(f => f.status === 'pending' && String(f.requester_id) === myId);
 
-  // String-safe incoming/outgoing invite split
+  // String-safe incoming/outgoing invite split — cancelled invites excluded by status check
   const myIncomingInvites = hitInvites.filter(i => i.status === 'pending' && String(i.receiver_id) === myId);
   const myOutgoingInvites = hitInvites.filter(i => i.status === 'pending' && String(i.sender_id) === myId);
 
+  // Deduped, 7-day-windowed responses to invites I sent
+  const myRespondedInvites = getRecentResponsesForSender(myId);
+
+  // Mark the visible deduped responses as seen now that they're rendered
+  const respondedIds = myRespondedInvites.map(i => i.id);
+  if (respondedIds.length) markResponsesSeen(respondedIds);
+  updateClubNavDot();
+
   console.log('[Courtside] renderFriends — myId:', myId);
-  console.log('[Courtside] hitInvites:', hitInvites.map(i => ({ id: i.id, sender: i.sender_id, receiver: i.receiver_id, status: i.status })));
-  console.log('[Courtside] incoming:', myIncomingInvites.length, 'outgoing:', myOutgoingInvites.length);
+  console.log('[Courtside] hitInvites:', hitInvites.map(i => ({ id: i.id, sender: i.sender_id, receiver: i.receiver_id, status: i.status, updated_at: i.updated_at })));
+  console.log('[Courtside] incoming:', myIncomingInvites.length, 'outgoing:', myOutgoingInvites.length, 'responded (deduped, ≤7d):', myRespondedInvites.length);
 
   // Load names for friend rows — include invite sender/receiver ids too
   const friendIds = [...new Set([
@@ -2583,6 +2602,7 @@ async function renderFriends(el) {
     ...sent.map(f => f.user_a === profile.id ? f.user_b : f.user_a),
     ...myIncomingInvites.map(i => i.sender_id),
     ...myOutgoingInvites.map(i => i.receiver_id),
+    ...myRespondedInvites.map(i => i.receiver_id),
   ])];
 
   let friendProfiles = {};
@@ -2620,10 +2640,6 @@ async function renderFriends(el) {
   let html = '';
 
   // ── Invites section ────────────────────────────────────────────────────────
-  const myRespondedInvites = hitInvites.filter(i =>
-    String(i.sender_id) === myId && ['accepted','maybe','declined'].includes(i.status)
-  );
-
   if (myIncomingInvites.length || myOutgoingInvites.length || myRespondedInvites.length) {
     html += `<div class="friend-section-label">Invites</div>`;
 
@@ -2658,13 +2674,16 @@ async function renderFriends(el) {
       </div>`;
     });
 
-    // Recent responses to invites I sent
+    // Recent responses to invites I sent (deduped, ≤7 days, newest per receiver)
     myRespondedInvites.forEach(inv => {
       const recvProf = friendProfiles[inv.receiver_id] || {};
-      const recvName = recvProf?.full_name || 'friend';
-      const verb = inv.status === 'accepted' ? 'accepted' : inv.status === 'maybe' ? 'said maybe to' : 'declined';
+      const recvName = recvProf?.full_name || 'A friend';
+      const headline = inv.status === 'accepted' ? `${recvName} accepted your invite`
+        : inv.status === 'maybe' ? `${recvName} said maybe`
+        : `${recvName} declined your invite`;
+      const pillLabel = inv.status === 'accepted' ? 'Accepted' : inv.status === 'maybe' ? 'Maybe' : 'Declined';
       html += `<div class="invite-response-card">
-        <div class="invite-response-headline">${recvName} ${verb} your invite<span class="invite-response-pill ${inv.status}">${inv.status === 'accepted' ? 'Accepted' : inv.status === 'maybe' ? 'Maybe' : 'Declined'}</span></div>
+        <div class="invite-response-headline">${headline}<span class="invite-response-pill ${inv.status}">${pillLabel}</span></div>
       </div>`;
     });
   }
