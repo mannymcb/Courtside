@@ -507,6 +507,19 @@ html, body { height: 100%; font-family: var(--font); background: var(--page); co
 .invite-card-meta { font-size: 12px; color: var(--ink3); margin-bottom: 10px; }
 .invite-card-actions { display: flex; gap: 7px; flex-wrap: wrap; }
 
+/* ── Nav notification dot ── */
+.nb { position: relative; }
+.nb-dot { position: absolute; top: 2px; right: calc(50% - 16px); width: 8px; height: 8px; border-radius: 50%; background: #e74c3c; border: 1.5px solid var(--surface); display: none; }
+.nb-dot.show { display: block; }
+
+/* ── Invite response cards ── */
+.invite-response-card { background: var(--page); border-radius: var(--r); border: 1px solid var(--border); padding: 11px 14px; margin-bottom: 8px; }
+.invite-response-headline { font-size: 13px; color: var(--ink2); }
+.invite-response-pill { display: inline-block; font-size: 10px; font-weight: 700; border-radius: 10px; padding: 2px 8px; margin-left: 6px; }
+.invite-response-pill.accepted { background: rgba(39,174,96,.15); color: #1e8449; }
+.invite-response-pill.maybe { background: rgba(91,143,212,.15); color: #3a72b8; }
+.invite-response-pill.declined { background: rgba(231,76,60,.1); color: #b03a2e; }
+
 /* ── Toast ── */
 #toast { position: fixed; bottom: calc(env(safe-area-inset-bottom) + 80px); left: 50%; transform: translateX(-50%) translateY(10px); background: #1a1a1a; color: #fff; padding: 10px 20px; border-radius: 20px; font-size: 13px; font-weight: 600; opacity: 0; transition: all .25s; z-index: 999; white-space: nowrap; pointer-events: none; }
 #toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
@@ -696,6 +709,7 @@ html, body { height: 100%; font-family: var(--font); background: var(--page); co
       Improve
     </button>
     <button class="nb" id="nb-club" onclick="goPage('club',this)">
+      <span class="nb-dot" id="club-nb-dot"></span>
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 00-3-3.87"/><path d="M16 3.13a4 4 0 010 7.75"/></svg>
       Club
     </button>
@@ -1582,6 +1596,45 @@ let inviteReceiverId = null;
 let inviteType = 'hit';
 let inviteTiming = 'this_week';
 
+function getSeenResponseIds() {
+  return new Set(load('cs_seen_invite_responses') || []);
+}
+function markResponsesSeen(ids) {
+  const seen = getSeenResponseIds();
+  ids.forEach(id => seen.add(id));
+  store('cs_seen_invite_responses', [...seen]);
+}
+
+function computeClubAttentionCount() {
+  if (!profile?.id) return 0;
+  const myId = String(profile.id);
+  const seen = getSeenResponseIds();
+
+  // 1. Incoming pending hit invites
+  const incomingPending = hitInvites.filter(i => i.status === 'pending' && String(i.receiver_id) === myId).length;
+
+  // 2. Outgoing invites that were responded to (accepted/maybe/declined) and not yet seen
+  const respondedUnseen = hitInvites.filter(i =>
+    String(i.sender_id) === myId &&
+    ['accepted','maybe','declined'].includes(i.status) &&
+    !seen.has(i.id)
+  ).length;
+
+  // 3. Incoming friend requests (pending, I'm not the requester)
+  const incomingFriendReqs = myFriendships.filter(f =>
+    f.status === 'pending' && String(f.requester_id) !== myId
+  ).length;
+
+  return incomingPending + respondedUnseen + incomingFriendReqs;
+}
+
+function updateClubNavDot() {
+  const dot = document.getElementById('club-nb-dot');
+  if (!dot) return;
+  const count = computeClubAttentionCount();
+  dot.classList.toggle('show', count > 0);
+}
+
 async function loadHitInvites() {
   if (!profile?.id) return;
   try {
@@ -1640,6 +1693,7 @@ async function submitHitInvite() {
     });
     closeInviteSheet();
     await loadHitInvites();
+    updateClubNavDot();
     showToast('Invite sent 🎾');
   } catch(e) {
     showToast(e.message || 'Could not send invite');
@@ -1649,15 +1703,20 @@ async function submitHitInvite() {
 }
 
 async function respondInvite(inviteId, response) {
+  console.log('[Courtside] respondInvite:', inviteId, response);
   try {
     await sbFetch('/rest/v1/rpc/respond_hit_invite', 'POST', {
       p_invite_id: inviteId,
       p_response: response,
     });
     await loadHitInvites();
+    updateClubNavDot();
     const el = document.getElementById('club-tab-content');
     if (el && clubActiveTab === 'friends') await renderFriends(el);
-    showToast(response === 'accepted' ? 'Accepted!' : response === 'maybe' ? 'Maybe noted' : 'Declined');
+    const msg = response === 'accepted' ? 'Invite accepted'
+      : response === 'maybe' ? 'Maybe sent'
+      : 'Invite declined';
+    showToast(msg);
   } catch(e) { showToast(e.message || 'Could not respond'); }
 }
 
@@ -1665,6 +1724,7 @@ async function cancelInvite(inviteId) {
   try {
     await sbFetch('/rest/v1/rpc/cancel_hit_invite', 'POST', { p_invite_id: inviteId });
     await loadHitInvites();
+    updateClubNavDot();
     const el = document.getElementById('club-tab-content');
     if (el && clubActiveTab === 'friends') await renderFriends(el);
     showToast('Invite cancelled');
@@ -2495,17 +2555,34 @@ async function renderDirectory(el) {
 async function renderFriends(el) {
   await loadFriendships();
   await loadHitInvites();
-  const myId = profile.id;
+  const myId = String(profile.id);
 
-  const pending = myFriendships.filter(f => f.status === 'pending' && f.requester_id !== myId);
+  // Mark sender-side responded invites as seen once viewed here
+  const respondedIds = hitInvites
+    .filter(i => String(i.sender_id) === myId && ['accepted','maybe','declined'].includes(i.status))
+    .map(i => i.id);
+  if (respondedIds.length) markResponsesSeen(respondedIds);
+  updateClubNavDot();
+
+  const pending = myFriendships.filter(f => f.status === 'pending' && String(f.requester_id) !== myId);
   const accepted = myFriendships.filter(f => f.status === 'accepted');
-  const sent = myFriendships.filter(f => f.status === 'pending' && f.requester_id === myId);
+  const sent = myFriendships.filter(f => f.status === 'pending' && String(f.requester_id) === myId);
 
-  // Load names for friend rows
+  // String-safe incoming/outgoing invite split
+  const myIncomingInvites = hitInvites.filter(i => i.status === 'pending' && String(i.receiver_id) === myId);
+  const myOutgoingInvites = hitInvites.filter(i => i.status === 'pending' && String(i.sender_id) === myId);
+
+  console.log('[Courtside] renderFriends — myId:', myId);
+  console.log('[Courtside] hitInvites:', hitInvites.map(i => ({ id: i.id, sender: i.sender_id, receiver: i.receiver_id, status: i.status })));
+  console.log('[Courtside] incoming:', myIncomingInvites.length, 'outgoing:', myOutgoingInvites.length);
+
+  // Load names for friend rows — include invite sender/receiver ids too
   const friendIds = [...new Set([
     ...pending.map(f => f.requester_id),
-    ...accepted.map(f => f.user_a === myId ? f.user_b : f.user_a),
-    ...sent.map(f => f.user_a === myId ? f.user_b : f.user_a),
+    ...accepted.map(f => f.user_a === profile.id ? f.user_b : f.user_a),
+    ...sent.map(f => f.user_a === profile.id ? f.user_b : f.user_a),
+    ...myIncomingInvites.map(i => i.sender_id),
+    ...myOutgoingInvites.map(i => i.receiver_id),
   ])];
 
   let friendProfiles = {};
@@ -2543,10 +2620,11 @@ async function renderFriends(el) {
   let html = '';
 
   // ── Invites section ────────────────────────────────────────────────────────
-  const myIncomingInvites = hitInvites.filter(i => i.receiver_id === myId && i.status === 'pending');
-  const myOutgoingInvites = hitInvites.filter(i => i.sender_id === myId && i.status === 'pending');
+  const myRespondedInvites = hitInvites.filter(i =>
+    String(i.sender_id) === myId && ['accepted','maybe','declined'].includes(i.status)
+  );
 
-  if (myIncomingInvites.length || myOutgoingInvites.length) {
+  if (myIncomingInvites.length || myOutgoingInvites.length || myRespondedInvites.length) {
     html += `<div class="friend-section-label">Invites</div>`;
 
     myIncomingInvites.forEach(inv => {
@@ -2574,8 +2652,19 @@ async function renderFriends(el) {
         <div class="invite-card-headline">Invite sent to ${recvName}</div>
         <div class="invite-card-meta">${typeLbl} · ${timeLbl}</div>
         <div class="invite-card-actions">
+          <span style="font-size:11px;color:var(--ink3);font-weight:600;padding:5px 4px;">Pending</span>
           <button class="friend-btn outline" onclick="cancelInvite('${inv.id}')">Cancel</button>
         </div>
+      </div>`;
+    });
+
+    // Recent responses to invites I sent
+    myRespondedInvites.forEach(inv => {
+      const recvProf = friendProfiles[inv.receiver_id] || {};
+      const recvName = recvProf?.full_name || 'friend';
+      const verb = inv.status === 'accepted' ? 'accepted' : inv.status === 'maybe' ? 'said maybe to' : 'declined';
+      html += `<div class="invite-response-card">
+        <div class="invite-response-headline">${recvName} ${verb} your invite<span class="invite-response-pill ${inv.status}">${inv.status === 'accepted' ? 'Accepted' : inv.status === 'maybe' ? 'Maybe' : 'Declined'}</span></div>
       </div>`;
     });
   }
@@ -2635,6 +2724,7 @@ async function friendAction(action, friendshipId) {
   try {
     await sbFetch('/rest/v1/rpc/' + rpc, 'POST', { friendship_id: friendshipId });
     await loadFriendships();
+    updateClubNavDot();
     const el = document.getElementById('club-tab-content');
     if (el) await renderFriends(el);
     showToast(action === 'accept' ? 'Friend added ✓' : action === 'remove' ? 'Removed' : 'Done');
@@ -3625,6 +3715,7 @@ async function initializeApp() {
   // Step 5: Load all app data (matches, practices, insights)
   hideLoading();
   await Promise.all([loadAppData(), loadActivityPrivacy().catch(()=>{}), loadFriendships().catch(()=>{}), loadHitInvites().catch(()=>{})]);
+  updateClubNavDot();
   console.log('[Courtside] initializeApp complete');
 }
 
