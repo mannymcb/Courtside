@@ -3153,22 +3153,21 @@ const COURTSIDE_DRILLS = [
   { title: "Mental reset between points", focus: ["Mental focus"], desc: "Use a fixed 4-step routine after every point: turn away, breathe, set strings, walk to position.", cue: "Same routine, win or lose.", duration: "5 min" },
 ];
 
-// ── Watch — curated video resources for 3.0–4.0 players ──────────────────────
+// ── Watch — curated, diversified video resources for 3.0–4.0 players ─────────
 const WATCH_RESOURCES = [
-  { title: "Improve Your Serve Placement", source: "USTA", why: "Breaks down serve targeting by zone — directly useful for club-level matches where placement beats power.", url: "https://www.usta.com/en/home/improve/tips-and-instruction/national/tennis-techniques--service-placement.html", focus: ["First serve","Second serve"] },
-  { title: "Return of Serve Strategy", source: "USTA", why: "Covers positioning and shot selection on return — a common weak point at the 3.0–4.0 level.", url: "https://www.usta.com/en/home/improve/tips-and-instruction/national/tennis-strategy--returning-first-and-second-serves.html", focus: ["Return"] },
-  { title: "Backhand Consistency Fundamentals", source: "USTA", why: "Focuses on repeatable mechanics rather than power — exactly what builds backhand tolerance in rallies.", url: "https://www.usta.com/en/home/improve/tips-and-instruction/national/learning-the-basics--backhand.html", focus: ["Backhand"] },
-  { title: "Offense at the Net", source: "USTA", why: "Practical guidance on closing and finishing at net, useful for both singles and doubles play.", url: "https://www.usta.com/en/home/improve/tips-and-instruction/national/improve-your-tennis-game--offense-at-the-net.html", focus: ["Net play","Volleys","Transition game"] },
-  { title: "Two-Handed Backhand Power", source: "USTA", why: "Explains how to add depth and pace to a two-handed backhand without sacrificing control.", url: "https://www.usta.com/en/home/improve/tips-and-instruction/national/improve-your-tennis-game--the-driving-force-in-your-two-handed-b.html", focus: ["Backhand"] },
-  { title: "Tennis Tips & Instruction Library", source: "USTA", why: "Full library covering footwork, strategy, and shot-specific instruction beyond the basics.", url: "https://www.usta.com/en/home/improve/tips-and-instruction.html", focus: ["Footwork","Court movement","Shot selection"] },
+  { title: "Serve Placement Lessons", source: "Essential Tennis", why: "Deep library of serve-targeting lessons from a coach who breaks technique down frame by frame.", url: "https://www.youtube.com/@EssentialTennis/search?query=serve%20placement", focus: ["First serve","Second serve"] },
+  { title: "Return of Serve Technique", source: "Intuitive Tennis", why: "Practical return positioning and timing cues built for club-level players, not just pros.", url: "https://www.youtube.com/@IntuitiveTennis/search?query=return%20of%20serve", focus: ["Return"] },
+  { title: "Backhand Consistency Drills", source: "Top Tennis Training", why: "Coach-led drills focused on repeatable backhand mechanics rather than one-off power tips.", url: "https://www.youtube.com/@toptennistraining/search?query=backhand%20consistency", focus: ["Backhand"] },
+  { title: "Doubles Positioning Basics", source: "USTA", why: "Official breakdown of doubles court coverage — useful before mixed or club doubles play.", url: "https://www.usta.com/en/home/improve/tips-and-instruction/national/improve-your-tennis-game--offense-at-the-net.html", focus: ["Net play","Transition game"] },
+  { title: "First Volley Control", source: "2 Minute Tennis", why: "Short, focused lessons on the first volley — a common breakdown point for club players moving forward.", url: "https://www.youtube.com/@2MinuteTennis/search?query=volley", focus: ["Volleys","Net play"] },
+  { title: "Split-Step Footwork Timing", source: "Feel Tennis Instruction", why: "Clear visual cues for split-step timing, the footwork fundamental most club players skip.", url: "https://www.youtube.com/@FeelTennis/search?query=split%20step", focus: ["Footwork","Court movement"] },
 ];
 
 // ── Read — articles for club-level improvement ────────────────────────────────
 const READ_RESOURCES = [
-  { title: "Tennis Strategy: Returning First and Second Serves", source: "USTA", why: "A practical breakdown of return positioning and shot selection by serve type.", url: "https://www.usta.com/en/home/improve/tips-and-instruction/national/tennis-strategy--returning-first-and-second-serves.html", focus: ["Return"] },
-  { title: "Tennis Serving Rules & Technique", source: "USTA", why: "Covers the technical and tactical side of serving — useful for players refining placement under match pressure.", url: "https://www.usta.com/en/home/improve/tips-and-instruction/national/tennis-serving-rules.html", focus: ["First serve","Second serve"] },
-  { title: "Learning the Basics: Forehand", source: "USTA", why: "A grounded refresher on forehand mechanics that's useful even for experienced 3.0–4.0 players cleaning up technique.", url: "https://www.usta.com/en/home/improve/tips-and-instruction/national/learning-the-basics--forehand.html", focus: ["Forehand"] },
-  { title: "Tips & Instruction Hub", source: "USTA", why: "Broad strategy and technique articles spanning singles and doubles tactics.", url: "https://www.usta.com/en/home/improve/tips-and-instruction.html", focus: ["Shot selection","Consistency","Mental focus"] },
+  { title: "Tennis Strategy: Returning Serves", source: "USTA", why: "Practical positioning and shot-selection breakdown by serve type.", url: "https://www.usta.com/en/home/improve/tips-and-instruction/national/tennis-strategy--returning-first-and-second-serves.html", focus: ["Return"] },
+  { title: "Serving Rules & Technique", source: "USTA", why: "Covers placement and tactics for refining serves under match pressure.", url: "https://www.usta.com/en/home/improve/tips-and-instruction/national/tennis-serving-rules.html", focus: ["First serve","Second serve"] },
+  { title: "Tips & Instruction Hub", source: "USTA", why: "Broad strategy and technique articles spanning singles and doubles tactics.", url: "https://www.usta.com/en/home/improve/tips-and-instruction.html", focus: ["Shot selection","Consistency","Mental focus","Footwork","Backhand","Forehand","Net play"] },
 ];
 
 // ── Books — selected reading ──────────────────────────────────────────────────
@@ -3244,16 +3243,19 @@ function topInsightText(focusRanked, recentM, recentP, hasData) {
 }
 
 function drillsForFocusAreas(focusRanked) {
-  // Map top focus areas to relevant Courtside drills, deduped, fallback to general set
-  const topAreas = focusRanked.slice(0, 4).map(([a]) => a.toLowerCase());
-  if (!topAreas.length) return COURTSIDE_DRILLS.slice(0, 4);
+  // Default set when no focus data exists yet
+  const defaultTitles = ["Serve consistency", "Return depth", "Backhand tolerance", "Net positioning", "Mental reset between points"];
+  const topAreas = focusRanked.slice(0, 3).map(([a]) => a.toLowerCase());
+  if (!topAreas.length) {
+    return defaultTitles.map(t => COURTSIDE_DRILLS.find(d => d.title === t)).filter(Boolean);
+  }
   const matched = COURTSIDE_DRILLS.filter(d => d.focus.some(f => topAreas.includes(f.toLowerCase())));
   const rest = COURTSIDE_DRILLS.filter(d => !matched.includes(d));
-  return [...matched, ...rest].slice(0, 6);
+  return [...matched, ...rest].slice(0, 4);
 }
 
 function watchForFocusAreas(focusRanked) {
-  const topAreas = focusRanked.slice(0, 4).map(([a]) => a.toLowerCase());
+  const topAreas = focusRanked.slice(0, 3).map(([a]) => a.toLowerCase());
   if (!topAreas.length) return WATCH_RESOURCES.slice(0, 4);
   const matched = WATCH_RESOURCES.filter(r => r.focus.some(f => topAreas.includes(f.toLowerCase())));
   const rest = WATCH_RESOURCES.filter(r => !matched.includes(r));
@@ -3261,7 +3263,7 @@ function watchForFocusAreas(focusRanked) {
 }
 
 function readForFocusAreas(focusRanked) {
-  const topAreas = focusRanked.slice(0, 4).map(([a]) => a.toLowerCase());
+  const topAreas = focusRanked.slice(0, 3).map(([a]) => a.toLowerCase());
   if (!topAreas.length) return READ_RESOURCES.slice(0, 3);
   const matched = READ_RESOURCES.filter(r => r.focus.some(f => topAreas.includes(f.toLowerCase())));
   const rest = READ_RESOURCES.filter(r => !matched.includes(r));
@@ -3283,26 +3285,13 @@ function renderImprove() {
     <div class="insight-value" style="font-size:15px;">${topInsightText(focusRanked, recentM, recentP, hasData)}</div>
   </div>`;
 
-  // ── Recent form + balance (only with data) ──────────────────────────────
-  if (hasData) {
-    if (last5.length > 0) {
-      const trend = last5W > last5L ? 'Positive form' : last5W === last5L ? 'Even form' : 'Tough stretch';
-      html += `<div class="insight-card">
-        <div class="insight-label">Recent form</div>
-        <div class="insight-value">W-L: ${last5W}–${last5L}</div>
-        <div class="insight-sub">${trend} over your last ${last5.length} match${last5.length !== 1 ? 'es' : ''}.</div>
-      </div>`;
-    }
+  // ── Recent form (only with match data) — balance card dropped to reduce volume ──
+  if (hasData && last5.length > 0) {
+    const trend = last5W > last5L ? 'Positive form' : last5W === last5L ? 'Even form' : 'Tough stretch';
     html += `<div class="insight-card">
-      <div class="insight-label">Match / practice balance (last 14 days)</div>
-      <div class="insight-value">${recentM} match${recentM !== 1 ? 'es' : ''}, ${recentP} practice${recentP !== 1 ? 's' : ''}</div>
-      <div class="insight-sub">${
-        recentM === 0 && recentP === 0 ? 'No activity in the last 14 days. Time to get back on court.'
-        : recentP === 0 ? 'No practices logged. Add a focused session before your next match.'
-        : recentM > recentP * 2 ? "You're match-heavy. Add one focused practice to sharpen your game."
-        : recentP > recentM * 2 ? 'Good practice volume. Match play will help you test your game.'
-        : 'Good balance: your practice volume is supporting match play.'
-      }</div>
+      <div class="insight-label">Recent form</div>
+      <div class="insight-value">W-L: ${last5W}–${last5L}</div>
+      <div class="insight-sub">${trend} over your last ${last5.length} match${last5.length !== 1 ? 'es' : ''}.</div>
     </div>`;
   }
 
@@ -3352,29 +3341,11 @@ function renderImprove() {
       <a href="${b.url}" target="_blank" rel="noopener noreferrer" class="book-link">View ›</a>
     </div>`).join('');
 
-  // ── Focus area ranking (kept, useful) ───────────────────────────────────
-  if (focusRanked.length > 0) {
-    const maxCount = focusRanked[0][1];
-    const top8 = focusRanked.slice(0, 8);
-    html += `<div class="improve-section-title">Focus areas ranked</div>
-    <div class="insight-card">
-      ${top8.map(([area, count]) => `
-        <div class="focus-rank-row">
-          <div>
-            <div class="focus-rank-name">${area}</div>
-            <div class="focus-rank-bar" style="width:${Math.round(count/maxCount*100)}%;max-width:160px;"></div>
-          </div>
-          <div class="focus-rank-count">${count} session${count !== 1 ? 's' : ''}</div>
-        </div>`).join('')}
-    </div>`;
-  }
-
   // ── Rules & scoring — compact, secondary ────────────────────────────────
   html += `<div class="rules-section">
     <div class="improve-section-title" style="margin-top:0;">Rules & scoring</div>
     <div class="insight-card" style="padding:4px 15px;">
-      <div class="rules-link-row"><span>Scoring basics</span><a href="https://www.usta.com/en/home/improve/tips-and-instruction/national/tennis-rules-and-scoring.html" target="_blank" rel="noopener noreferrer">USTA guide ›</a></div>
-      <div class="rules-link-row"><span>Serving rules</span><a href="https://www.usta.com/en/home/improve/tips-and-instruction/national/tennis-serving-rules.html" target="_blank" rel="noopener noreferrer">USTA guide ›</a></div>
+      <div class="rules-link-row"><span>Scoring basics</span><a href="https://www.usta.com/en/home/improve/tips-and-instruction/national/tennis-serving-rules.html" target="_blank" rel="noopener noreferrer">USTA guide ›</a></div>
       <div class="rules-link-row"><span>Full rulebook</span><a href="https://www.usta.com/en/home/improve/tips-and-instruction.html" target="_blank" rel="noopener noreferrer">USTA library ›</a></div>
     </div>
   </div>`;
