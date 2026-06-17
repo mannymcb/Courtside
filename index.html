@@ -520,6 +520,29 @@ html, body { height: 100%; font-family: var(--font); background: var(--page); co
 .invite-response-pill.maybe { background: rgba(91,143,212,.15); color: #3a72b8; }
 .invite-response-pill.declined { background: rgba(231,76,60,.1); color: #b03a2e; }
 
+/* ── Improve hub sections ── */
+.improve-section-title { font-size: 15px; font-weight: 800; color: var(--ink); margin: 20px 4px 10px; }
+.improve-section-title:first-child { margin-top: 4px; }
+.drill-card { background: var(--surface); border-radius: var(--r); border: 1px solid var(--border); padding: 13px 15px; margin-bottom: 8px; }
+.drill-card-top { display: flex; align-items: center; justify-content: space-between; margin-bottom: 6px; }
+.drill-title { font-size: 14px; font-weight: 700; color: var(--ink); }
+.drill-duration { font-size: 11px; font-weight: 600; color: var(--ink3); background: var(--page); border-radius: 8px; padding: 2px 8px; border: 1px solid var(--border); flex-shrink: 0; }
+.drill-desc { font-size: 13px; color: var(--ink2); line-height: 1.5; margin-bottom: 6px; }
+.drill-cue { font-size: 12px; color: var(--ink3); font-style: italic; }
+.watch-card, .read-card { background: var(--surface); border-radius: var(--r); border: 1px solid var(--border); padding: 13px 15px; margin-bottom: 8px; }
+.watch-card-source { font-size: 11px; font-weight: 700; color: var(--season-bg1); text-transform: uppercase; letter-spacing: .4px; margin-bottom: 3px; }
+.watch-card-title { font-size: 14px; font-weight: 700; color: var(--ink); margin-bottom: 5px; }
+.watch-card-why { font-size: 13px; color: var(--ink2); line-height: 1.5; margin-bottom: 9px; }
+.watch-card-link { display: inline-block; font-size: 12px; font-weight: 700; color: #fff; background: var(--season-bg1); border-radius: 16px; padding: 6px 14px; text-decoration: none; }
+.book-card { display: flex; align-items: center; justify-content: space-between; gap: 10px; background: var(--surface); border-radius: var(--rsm); border: 1px solid var(--border); padding: 11px 14px; margin-bottom: 7px; }
+.book-title { font-size: 13px; font-weight: 700; color: var(--ink); }
+.book-author { font-size: 11px; color: var(--ink3); margin-top: 1px; }
+.book-link { font-size: 12px; font-weight: 700; color: var(--season-bg1); text-decoration: none; flex-shrink: 0; }
+.rules-section { margin-top: 18px; border-top: 1px solid var(--border); padding-top: 14px; }
+.rules-link-row { display: flex; align-items: center; justify-content: space-between; padding: 9px 0; border-bottom: 1px solid var(--border); font-size: 13px; }
+.rules-link-row:last-child { border-bottom: none; }
+.rules-link-row a { color: var(--season-bg1); font-weight: 600; text-decoration: none; }
+
 /* ── Toast ── */
 #toast { position: fixed; bottom: calc(env(safe-area-inset-bottom) + 80px); left: 50%; transform: translateX(-50%) translateY(10px); background: #1a1a1a; color: #fff; padding: 10px 20px; border-radius: 20px; font-size: 13px; font-weight: 600; opacity: 0; transition: all .25s; z-index: 999; white-space: nowrap; pointer-events: none; }
 #toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
@@ -3118,6 +3141,43 @@ const IMPROVEMENT_RESOURCES = {
   ],
 };
 
+// ── Courtside drill library (adult club player focused) ─────────────────────
+const COURTSIDE_DRILLS = [
+  { title: "Serve consistency", focus: ["First serve","Second serve"], desc: "Hit 25 first serves targeting the zone you struggle with most. Track makes, not just speed.", cue: "Same toss, same rhythm, every time.", duration: "10 min" },
+  { title: "Return depth", focus: ["Return"], desc: "Rally returns crosscourt only, aiming past the service line every time. No winners — just depth.", cue: "Block and redirect, don't swing big.", duration: "10 min" },
+  { title: "Backhand tolerance", focus: ["Backhand"], desc: "Rally backhand-to-backhand for 20 balls minimum before either player can go for a winner.", cue: "Patience first, power second.", duration: "15 min" },
+  { title: "Net positioning", focus: ["Net play","Volleys"], desc: "Practice closing in two steps after your approach shot — split-step, then close to the service line.", cue: "Approach, split, close.", duration: "10 min" },
+  { title: "First-volley control", focus: ["Volleys","Net play"], desc: "Partner feeds low balls to your feet at net. Focus on a short, controlled punch — not a full swing.", cue: "Short backswing, soft hands.", duration: "10 min" },
+  { title: "Doubles movement", focus: ["Net play","Court movement","Transition game"], desc: "Practice moving as a unit with your partner — both up, both back, never split unless forced.", cue: "Move together, cover as one.", duration: "15 min" },
+  { title: "Approach + finish", focus: ["Transition game","Net play"], desc: "Hit a deep approach off a short ball, move in, and finish the point at net within 2 shots.", cue: "Deep approach, fast close, finish.", duration: "15 min" },
+  { title: "Mental reset between points", focus: ["Mental focus"], desc: "Use a fixed 4-step routine after every point: turn away, breathe, set strings, walk to position.", cue: "Same routine, win or lose.", duration: "5 min" },
+];
+
+// ── Watch — curated video resources for 3.0–4.0 players ──────────────────────
+const WATCH_RESOURCES = [
+  { title: "Improve Your Serve Placement", source: "USTA", why: "Breaks down serve targeting by zone — directly useful for club-level matches where placement beats power.", url: "https://www.usta.com/en/home/improve/tips-and-instruction/national/tennis-techniques--service-placement.html", focus: ["First serve","Second serve"] },
+  { title: "Return of Serve Strategy", source: "USTA", why: "Covers positioning and shot selection on return — a common weak point at the 3.0–4.0 level.", url: "https://www.usta.com/en/home/improve/tips-and-instruction/national/tennis-strategy--returning-first-and-second-serves.html", focus: ["Return"] },
+  { title: "Backhand Consistency Fundamentals", source: "USTA", why: "Focuses on repeatable mechanics rather than power — exactly what builds backhand tolerance in rallies.", url: "https://www.usta.com/en/home/improve/tips-and-instruction/national/learning-the-basics--backhand.html", focus: ["Backhand"] },
+  { title: "Offense at the Net", source: "USTA", why: "Practical guidance on closing and finishing at net, useful for both singles and doubles play.", url: "https://www.usta.com/en/home/improve/tips-and-instruction/national/improve-your-tennis-game--offense-at-the-net.html", focus: ["Net play","Volleys","Transition game"] },
+  { title: "Two-Handed Backhand Power", source: "USTA", why: "Explains how to add depth and pace to a two-handed backhand without sacrificing control.", url: "https://www.usta.com/en/home/improve/tips-and-instruction/national/improve-your-tennis-game--the-driving-force-in-your-two-handed-b.html", focus: ["Backhand"] },
+  { title: "Tennis Tips & Instruction Library", source: "USTA", why: "Full library covering footwork, strategy, and shot-specific instruction beyond the basics.", url: "https://www.usta.com/en/home/improve/tips-and-instruction.html", focus: ["Footwork","Court movement","Shot selection"] },
+];
+
+// ── Read — articles for club-level improvement ────────────────────────────────
+const READ_RESOURCES = [
+  { title: "Tennis Strategy: Returning First and Second Serves", source: "USTA", why: "A practical breakdown of return positioning and shot selection by serve type.", url: "https://www.usta.com/en/home/improve/tips-and-instruction/national/tennis-strategy--returning-first-and-second-serves.html", focus: ["Return"] },
+  { title: "Tennis Serving Rules & Technique", source: "USTA", why: "Covers the technical and tactical side of serving — useful for players refining placement under match pressure.", url: "https://www.usta.com/en/home/improve/tips-and-instruction/national/tennis-serving-rules.html", focus: ["First serve","Second serve"] },
+  { title: "Learning the Basics: Forehand", source: "USTA", why: "A grounded refresher on forehand mechanics that's useful even for experienced 3.0–4.0 players cleaning up technique.", url: "https://www.usta.com/en/home/improve/tips-and-instruction/national/learning-the-basics--forehand.html", focus: ["Forehand"] },
+  { title: "Tips & Instruction Hub", source: "USTA", why: "Broad strategy and technique articles spanning singles and doubles tactics.", url: "https://www.usta.com/en/home/improve/tips-and-instruction.html", focus: ["Shot selection","Consistency","Mental focus"] },
+];
+
+// ── Books — selected reading ──────────────────────────────────────────────────
+const IMPROVE_BOOKS = [
+  { title: "The Inner Game of Tennis", author: "W. Timothy Gallwey", url: "https://www.amazon.com/Inner-Game-Tennis-Classic-Performance/dp/0679778314" },
+  { title: "Winning Ugly", author: "Brad Gilbert with Steve Jamison", url: "https://www.amazon.com/Winning-Ugly-Mental-Warfare-Tennis/dp/0671732449" },
+  { title: "Doubles Strategy: Patterns for Winning", author: "Various USTA contributors", url: "https://www.usta.com/en/home/improve/tips-and-instruction.html" },
+];
+
 // ── Insight engine ────────────────────────────────────────────────────────────
 function computeInsights() {
   const matches = allEntries.filter(e => e._kind === 'match');
@@ -3172,91 +3232,132 @@ function renderResourceCards(resources) {
 }
 
 // ── Render improve page ───────────────────────────────────────────────────────
+function topInsightText(focusRanked, recentM, recentP, hasData) {
+  if (!hasData) return "Log a few matches and practices to unlock personalized improvement ideas.";
+  if (focusRanked.length > 0) {
+    const [topArea, count] = focusRanked[0];
+    if (count >= 3) return `${topArea} has been your top focus area recently — ${count} sessions in the last 30 days.`;
+    return `${topArea} has shown up in your recent sessions. Worth a focused drill this week.`;
+  }
+  if (recentM === 0 && recentP === 0) return "No activity in the last 14 days. Time to get back on court.";
+  return "Add focus areas to your logs to unlock personalized insights here.";
+}
+
+function drillsForFocusAreas(focusRanked) {
+  // Map top focus areas to relevant Courtside drills, deduped, fallback to general set
+  const topAreas = focusRanked.slice(0, 4).map(([a]) => a.toLowerCase());
+  if (!topAreas.length) return COURTSIDE_DRILLS.slice(0, 4);
+  const matched = COURTSIDE_DRILLS.filter(d => d.focus.some(f => topAreas.includes(f.toLowerCase())));
+  const rest = COURTSIDE_DRILLS.filter(d => !matched.includes(d));
+  return [...matched, ...rest].slice(0, 6);
+}
+
+function watchForFocusAreas(focusRanked) {
+  const topAreas = focusRanked.slice(0, 4).map(([a]) => a.toLowerCase());
+  if (!topAreas.length) return WATCH_RESOURCES.slice(0, 4);
+  const matched = WATCH_RESOURCES.filter(r => r.focus.some(f => topAreas.includes(f.toLowerCase())));
+  const rest = WATCH_RESOURCES.filter(r => !matched.includes(r));
+  return [...matched, ...rest].slice(0, 4);
+}
+
+function readForFocusAreas(focusRanked) {
+  const topAreas = focusRanked.slice(0, 4).map(([a]) => a.toLowerCase());
+  if (!topAreas.length) return READ_RESOURCES.slice(0, 3);
+  const matched = READ_RESOURCES.filter(r => r.focus.some(f => topAreas.includes(f.toLowerCase())));
+  const rest = READ_RESOURCES.filter(r => !matched.includes(r));
+  return [...matched, ...rest].slice(0, 3);
+}
+
 function renderImprove() {
   const el = document.getElementById('improve-content');
   if (!el) { console.warn('[Courtside] renderImprove — element not found'); return; }
-  const { focusRanked, totalFocusSessions, last5, last5W, last5L, recentM, recentP, matches, practices } = computeInsights();
+  const { focusRanked, last5, last5W, last5L, recentM, recentP, matches, practices } = computeInsights();
   const hasData = matches.length > 0 || practices.length > 0;
-  const hasFocus = focusRanked.length > 0;
-  console.log('[Courtside] renderImprove — matches:', matches.length, 'practices:', practices.length, 'hasFocus:', hasFocus, 'top3:', focusRanked.slice(0,3).map(([f,c])=>f+':'+c));
-
-  // Normalize focus area name for resource lookup (case-insensitive)
-  function lookupResource(area) {
-    if (!area) return null;
-    const key = Object.keys(IMPROVEMENT_RESOURCES).find(k => k.toLowerCase() === area.toLowerCase());
-    return key ? IMPROVEMENT_RESOURCES[key] : null;
-  }
-
-  if (!hasData) {
-    el.innerHTML = `
-      <div class="insight-card">
-        <div class="insight-label">Getting started</div>
-        <div class="insight-value">Your improvement profile builds as you play.</div>
-        <div class="insight-sub" style="margin-top:6px;">Log a match and a practice to unlock your first insights.</div>
-      </div>
-      <div class="insight-card">
-        <div class="insight-label">Focus area trends</div>
-        <div class="insight-sub">Add focus areas to your logs to unlock improvement trends and targeted drills.</div>
-      </div>`;
-    console.log('[Courtside] renderImprove — showing empty state');
-    return;
-  }
+  console.log('[Courtside] renderImprove — matches:', matches.length, 'practices:', practices.length, 'top3:', focusRanked.slice(0,3).map(([f,c])=>f+':'+c));
 
   let html = '';
 
-  // A. Recent form
-  if (last5.length > 0) {
-    const trend = last5W > last5L ? 'Positive form' : last5W === last5L ? 'Even form' : 'Tough stretch';
-    html += `<div class="insight-card">
-      <div class="insight-label">Recent form</div>
-      <div class="insight-value">W-L: ${last5W}–${last5L}</div>
-      <div class="insight-sub">${trend} over your last ${last5.length} match${last5.length !== 1 ? 'es' : ''}.</div>
-    </div>`;
-  }
-
-  // B. Match / practice balance
+  // ── Top insight card ─────────────────────────────────────────────────────
   html += `<div class="insight-card">
-    <div class="insight-label">Match / practice balance (last 14 days)</div>
-    <div class="insight-value">${recentM} match${recentM !== 1 ? 'es' : ''}, ${recentP} practice${recentP !== 1 ? 's' : ''}</div>
-    <div class="insight-sub">${
-      recentM === 0 && recentP === 0 ? 'No activity in the last 14 days. Time to get back on court.'
-      : recentP === 0 ? 'No practices logged. Add a focused session before your next match.'
-      : recentM > recentP * 2 ? 'You\'re match-heavy. Add one focused practice to sharpen your game.'
-      : recentP > recentM * 2 ? 'Good practice volume. Match play will help you test your game.'
-      : 'Good balance: your practice volume is supporting match play.'
-    }</div>
+    <div class="insight-label">Insight</div>
+    <div class="insight-value" style="font-size:15px;">${topInsightText(focusRanked, recentM, recentP, hasData)}</div>
   </div>`;
 
-  // C. Focus area resource cards — top 3 with real drills
-  if (!hasFocus) {
-    html += `<div class="insight-card">
-      <div class="insight-label">Drills and practice ideas</div>
-      <div class="insight-value" style="font-size:15px;">Add focus areas to your logs</div>
-      <div class="insight-sub" style="margin-top:6px;">Select focus areas when logging a match or practice to unlock targeted drills here.</div>
-    </div>`;
-  } else {
-    const top3 = focusRanked.slice(0, 3);
-    top3.forEach(([area, count]) => {
-      const resources = lookupResource(area);
+  // ── Recent form + balance (only with data) ──────────────────────────────
+  if (hasData) {
+    if (last5.length > 0) {
+      const trend = last5W > last5L ? 'Positive form' : last5W === last5L ? 'Even form' : 'Tough stretch';
       html += `<div class="insight-card">
-        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;">
-          <div>
-            <div class="insight-label">Focus area</div>
-            <div class="insight-value" style="font-size:16px;">${area}</div>
-          </div>
-          <span style="font-size:11px;color:var(--ink3);">${count} session${count !== 1 ? 's' : ''}</span>
-        </div>
-        ${resources ? renderResourceCards(resources) : `<div style="font-size:12px;color:var(--ink3);font-style:italic;padding:8px 0;">Resource coming soon for ${area}.</div>`}
+        <div class="insight-label">Recent form</div>
+        <div class="insight-value">W-L: ${last5W}–${last5L}</div>
+        <div class="insight-sub">${trend} over your last ${last5.length} match${last5.length !== 1 ? 'es' : ''}.</div>
       </div>`;
-    });
+    }
+    html += `<div class="insight-card">
+      <div class="insight-label">Match / practice balance (last 14 days)</div>
+      <div class="insight-value">${recentM} match${recentM !== 1 ? 'es' : ''}, ${recentP} practice${recentP !== 1 ? 's' : ''}</div>
+      <div class="insight-sub">${
+        recentM === 0 && recentP === 0 ? 'No activity in the last 14 days. Time to get back on court.'
+        : recentP === 0 ? 'No practices logged. Add a focused session before your next match.'
+        : recentM > recentP * 2 ? "You're match-heavy. Add one focused practice to sharpen your game."
+        : recentP > recentM * 2 ? 'Good practice volume. Match play will help you test your game.'
+        : 'Good balance: your practice volume is supporting match play.'
+      }</div>
+    </div>`;
   }
 
-  // D. Focus area ranking
-  if (hasFocus) {
+  // ── Recommended drills ───────────────────────────────────────────────────
+  html += `<div class="improve-section-title">Recommended drills</div>`;
+  const drills = drillsForFocusAreas(focusRanked);
+  html += drills.map(d => `
+    <div class="drill-card">
+      <div class="drill-card-top">
+        <div class="drill-title">${d.title}</div>
+        <div class="drill-duration">${d.duration}</div>
+      </div>
+      <div class="drill-desc">${d.desc}</div>
+      <div class="drill-cue">"${d.cue}"</div>
+    </div>`).join('');
+
+  // ── Watch ─────────────────────────────────────────────────────────────────
+  html += `<div class="improve-section-title">Watch</div>`;
+  const watch = watchForFocusAreas(focusRanked);
+  html += watch.map(w => `
+    <div class="watch-card">
+      <div class="watch-card-source">${w.source}</div>
+      <div class="watch-card-title">${w.title}</div>
+      <div class="watch-card-why">${w.why}</div>
+      <a href="${w.url}" target="_blank" rel="noopener noreferrer" class="watch-card-link">Watch ›</a>
+    </div>`).join('');
+
+  // ── Read ──────────────────────────────────────────────────────────────────
+  html += `<div class="improve-section-title">Read</div>`;
+  const reads = readForFocusAreas(focusRanked);
+  html += reads.map(r => `
+    <div class="read-card">
+      <div class="watch-card-source">${r.source}</div>
+      <div class="watch-card-title">${r.title}</div>
+      <div class="watch-card-why">${r.why}</div>
+      <a href="${r.url}" target="_blank" rel="noopener noreferrer" class="watch-card-link">Read ›</a>
+    </div>`).join('');
+
+  // ── Books ─────────────────────────────────────────────────────────────────
+  html += `<div class="improve-section-title">Books</div>`;
+  html += IMPROVE_BOOKS.map(b => `
+    <div class="book-card">
+      <div>
+        <div class="book-title">${b.title}</div>
+        <div class="book-author">${b.author}</div>
+      </div>
+      <a href="${b.url}" target="_blank" rel="noopener noreferrer" class="book-link">View ›</a>
+    </div>`).join('');
+
+  // ── Focus area ranking (kept, useful) ───────────────────────────────────
+  if (focusRanked.length > 0) {
     const maxCount = focusRanked[0][1];
     const top8 = focusRanked.slice(0, 8);
-    html += `<div class="insight-card">
-      <div class="insight-label">Focus areas ranked</div>
+    html += `<div class="improve-section-title">Focus areas ranked</div>
+    <div class="insight-card">
       ${top8.map(([area, count]) => `
         <div class="focus-rank-row">
           <div>
@@ -3268,7 +3369,17 @@ function renderImprove() {
     </div>`;
   }
 
-  html += `<div style="text-align:center;padding:20px 4px 8px;border-top:1px solid var(--border);margin-top:8px;"><div style="font-size:12px;color:var(--ink3);">Testing Courtside? <a href="mailto:manny.mcb@gmail.com?subject=Courtside feedback" style="color:var(--season-bg1);font-weight:600;text-decoration:none;">Send feedback →</a></div></div>`;
+  // ── Rules & scoring — compact, secondary ────────────────────────────────
+  html += `<div class="rules-section">
+    <div class="improve-section-title" style="margin-top:0;">Rules & scoring</div>
+    <div class="insight-card" style="padding:4px 15px;">
+      <div class="rules-link-row"><span>Scoring basics</span><a href="https://www.usta.com/en/home/improve/tips-and-instruction/national/tennis-rules-and-scoring.html" target="_blank" rel="noopener noreferrer">USTA guide ›</a></div>
+      <div class="rules-link-row"><span>Serving rules</span><a href="https://www.usta.com/en/home/improve/tips-and-instruction/national/tennis-serving-rules.html" target="_blank" rel="noopener noreferrer">USTA guide ›</a></div>
+      <div class="rules-link-row"><span>Full rulebook</span><a href="https://www.usta.com/en/home/improve/tips-and-instruction.html" target="_blank" rel="noopener noreferrer">USTA library ›</a></div>
+    </div>
+  </div>`;
+
+  html += `<div style="text-align:center;padding:20px 4px 8px;border-top:1px solid var(--border);margin-top:14px;"><div style="font-size:12px;color:var(--ink3);">Testing Courtside? <a href="mailto:manny.mcb@gmail.com?subject=Courtside feedback" style="color:var(--season-bg1);font-weight:600;text-decoration:none;">Send feedback →</a></div></div>`;
   el.innerHTML = html;
   console.log('[Courtside] renderImprove — done');
 }
