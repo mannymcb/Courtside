@@ -2529,6 +2529,71 @@ const REACTION_LABELS = {
 
 function reactionKey(type, id) { return `${type}:${id}`; }
 
+// ── Reactions to your own activity ───────────────────────────────────────────
+let reactionsToYou = [];
+
+async function loadReactionsToYou() {
+  reactionsToYou = [];
+  if (!profile?.id || !allEntries.length) return;
+
+  const cutoff = new Date(Date.now() - 14 * 24 * 60 * 60 * 1000).toISOString();
+  const myActivityIds = allEntries.map(e => e.id);
+  if (!myActivityIds.length) return;
+
+  try {
+    const rows = await sbFetch(
+      `/rest/v1/activity_reactions?activity_id=in.(${myActivityIds.join(',')})&reactor_id=neq.${profile.id}&created_at=gte.${cutoff}&select=*&order=created_at.desc&limit=20`
+    );
+    const list = Array.isArray(rows) ? rows : [];
+    if (!list.length) return;
+
+    // Look up reactor names
+    const reactorIds = [...new Set(list.map(r => r.reactor_id))];
+    let reactorProfiles = {};
+    if (reactorIds.length) {
+      try {
+        const profs = await sbFetch(`/rest/v1/profiles?id=in.(${reactorIds.join(',')})&select=id,full_name`);
+        (Array.isArray(profs) ? profs : []).forEach(p => { reactorProfiles[p.id] = p; });
+      } catch(e) { console.warn('[Courtside] reactor profiles load failed:', e.message); }
+    }
+
+    // Map activity_id back to entry for context (kind + date)
+    const entryById = {};
+    allEntries.forEach(e => { entryById[e.id] = e; });
+
+    reactionsToYou = list.slice(0, 5).map(r => {
+      const entry = entryById[r.activity_id];
+      const reactorName = reactorProfiles[r.reactor_id]?.full_name || 'A friend';
+      return {
+        id: r.id,
+        reactorName,
+        reactionType: r.reaction_type,
+        activityKind: entry?._kind || r.activity_type,
+        activityDate: entry?._date,
+        createdAt: r.created_at,
+      };
+    });
+    console.log('[Courtside] reactionsToYou loaded:', reactionsToYou.length);
+  } catch(e) {
+    console.warn('[Courtside] loadReactionsToYou failed:', e.message);
+    reactionsToYou = [];
+  }
+}
+
+function renderReactionsToYouSection() {
+  if (!reactionsToYou.length) return '';
+  const cards = reactionsToYou.map(r => {
+    const label = REACTION_LABELS[r.reactionType] || r.reactionType;
+    const onWhat = r.activityKind === 'match' ? 'on your match' : 'on your practice';
+    const dateLabel = r.activityDate ? feedDateLabel(r.activityDate) : '';
+    return `<div class="invite-response-card">
+      <div class="invite-response-headline">${r.reactorName} reacted: ${label} <span style="color:var(--ink3);font-weight:400;">${onWhat}</span></div>
+      ${dateLabel ? `<div style="font-size:11px;color:var(--ink4);margin-top:2px;">${dateLabel}</div>` : ''}
+    </div>`;
+  }).join('');
+  return `<div class="friend-section-label">Reactions to you</div>${cards}`;
+}
+
 async function loadFeedReactions(items) {
   if (!items.length) { feedReactions = {}; return; }
   const allIds = [...new Set(items.map(i => i.activity_id))];
@@ -2616,8 +2681,13 @@ async function renderFeed(el) {
   try {
     const res = await sbFetch('/rest/v1/rpc/get_friend_feed', 'POST', {});
     const raw = Array.isArray(res) ? res.slice(0, 50) : [];
+
+    // Load reactions to the current user's own activity (independent of friend feed results)
+    await loadReactionsToYou();
+    const reactionsToYouHtml = renderReactionsToYouSection();
+
     if (!raw.length) {
-      el.innerHTML = '<div class="club-empty"><div class="club-empty-title">No friend activity yet</div><div>Add players or log a session to get started.</div></div>';
+      el.innerHTML = reactionsToYouHtml + '<div class="club-empty"><div class="club-empty-title">No friend activity yet</div><div>Add players or log a session to get started.</div></div>';
       return;
     }
 
@@ -2673,7 +2743,7 @@ async function renderFeed(el) {
     }
 
     function doRender() {
-      el.innerHTML = renderCards();
+      el.innerHTML = reactionsToYouHtml + renderCards();
     }
 
     // Expose toggle so onclick works
