@@ -3327,28 +3327,26 @@ const COURTSIDE_DRILLS = [
   { title: "Mental reset between points", focus: ["Mental focus"], desc: "Use a fixed 4-step routine after every point: turn away, breathe, set strings, walk to position.", cue: "Same routine, win or lose.", duration: "5 min" },
 ];
 
-// ── Watch — curated, diversified video resources for 3.0–4.0 players ─────────
+// ── Watch — balanced portfolio: USTA + targeted YouTube searches ─────────────
 const WATCH_RESOURCES = [
-  { title: "Serve Placement Lessons", source: "Essential Tennis", why: "Deep library of serve-targeting lessons from a coach who breaks technique down frame by frame.", url: "https://www.youtube.com/@EssentialTennis/search?query=serve%20placement", focus: ["First serve","Second serve"] },
-  { title: "Return of Serve Technique", source: "Intuitive Tennis", why: "Practical return positioning and timing cues built for club-level players, not just pros.", url: "https://www.youtube.com/@IntuitiveTennis/search?query=return%20of%20serve", focus: ["Return"] },
-  { title: "Backhand Consistency Drills", source: "Top Tennis Training", why: "Coach-led drills focused on repeatable backhand mechanics rather than one-off power tips.", url: "https://www.youtube.com/@toptennistraining/search?query=backhand%20consistency", focus: ["Backhand"] },
-  { title: "Doubles Positioning Basics", source: "USTA", why: "Official breakdown of doubles court coverage — useful before mixed or club doubles play.", url: "https://www.usta.com/en/home/improve/tips-and-instruction/national/improve-your-tennis-game--offense-at-the-net.html", focus: ["Net play","Transition game"] },
-  { title: "First Volley Control", source: "2 Minute Tennis", why: "Short, focused lessons on the first volley — a common breakdown point for club players moving forward.", url: "https://www.youtube.com/@2MinuteTennis/search?query=volley", focus: ["Volleys","Net play"] },
-  { title: "Split-Step Footwork Timing", source: "Feel Tennis Instruction", why: "Clear visual cues for split-step timing, the footwork fundamental most club players skip.", url: "https://www.youtube.com/@FeelTennis/search?query=split%20step", focus: ["Footwork","Court movement"] },
+  { title: "Serve Placement Technique", source: "USTA", why: "Official breakdown of serve targeting by zone — a credible baseline before going deeper.", url: "https://www.usta.com/en/home/improve/tips-and-instruction/national/tennis-techniques--service-placement.html", linkType: "resource", focus: ["First serve","Second serve"] },
+  { title: "Return Depth & Positioning", source: "Essential Tennis", why: "Frame-by-frame coaching on return positioning and timing, built for club-level players.", url: "https://www.youtube.com/results?search_query=Essential+Tennis+return+of+serve+depth", linkType: "search", focus: ["Return"] },
+  { title: "Backhand Consistency Drills", source: "Intuitive Tennis", why: "Repeatable backhand mechanics drills, not one-off power tips — matches the rally-tolerance goal.", url: "https://www.youtube.com/results?search_query=Intuitive+Tennis+backhand+consistency", linkType: "search", focus: ["Backhand"] },
+  { title: "Doubles Positioning & First Volley", source: "Top Tennis Training", why: "Practical coaching on doubles court coverage and the first volley — common 3.0–4.0 weak points.", url: "https://www.youtube.com/results?search_query=Top+Tennis+Training+doubles+positioning+volley", linkType: "search", focus: ["Net play","Volleys","Transition game"] },
 ];
 
-// ── Read — articles for club-level improvement ────────────────────────────────
+// ── Read — mixed credible sources for club-level improvement ─────────────────
 const READ_RESOURCES = [
   { title: "Tennis Strategy: Returning Serves", source: "USTA", why: "Practical positioning and shot-selection breakdown by serve type.", url: "https://www.usta.com/en/home/improve/tips-and-instruction/national/tennis-strategy--returning-first-and-second-serves.html", focus: ["Return"] },
-  { title: "Serving Rules & Technique", source: "USTA", why: "Covers placement and tactics for refining serves under match pressure.", url: "https://www.usta.com/en/home/improve/tips-and-instruction/national/tennis-serving-rules.html", focus: ["First serve","Second serve"] },
-  { title: "Tips & Instruction Hub", source: "USTA", why: "Broad strategy and technique articles spanning singles and doubles tactics.", url: "https://www.usta.com/en/home/improve/tips-and-instruction.html", focus: ["Shot selection","Consistency","Mental focus","Footwork","Backhand","Forehand","Net play"] },
+  { title: "5 Doubles Strategies for Club Players", source: "Talking Tennis", why: "Simple, specific doubles tactics — depth, down-the-line warnings, positioning — written for recreational teams.", url: "https://talkingtennis.net/blog-posts/tennis-tactics-5-simple-effective-doubles-strategies-for-club-players", focus: ["Net play","Transition game"] },
+  { title: "Offense at the Net", source: "USTA", why: "Official guidance on closing and finishing points at net for singles and doubles.", url: "https://www.usta.com/en/home/improve/tips-and-instruction/national/improve-your-tennis-game--offense-at-the-net.html", focus: ["Volleys","Net play","Shot selection"] },
 ];
 
 // ── Books — selected reading ──────────────────────────────────────────────────
 const IMPROVE_BOOKS = [
   { title: "The Inner Game of Tennis", author: "W. Timothy Gallwey", url: "https://www.amazon.com/Inner-Game-Tennis-Classic-Performance/dp/0679778314" },
   { title: "Winning Ugly", author: "Brad Gilbert with Steve Jamison", url: "https://www.amazon.com/Winning-Ugly-Mental-Warfare-Tennis/dp/0671732449" },
-  { title: "Doubles Strategy: Patterns for Winning", author: "Various USTA contributors", url: "https://www.usta.com/en/home/improve/tips-and-instruction.html" },
+  { title: "Killer Doubles", author: "Rick Altman", url: "https://www.amazon.com/Killer-Doubles-Strategies-tactics-better/dp/0990633101" },
 ];
 
 // ── Insight engine ────────────────────────────────────────────────────────────
@@ -3436,6 +3434,12 @@ function watchForFocusAreas(focusRanked) {
   return [...matched, ...rest].slice(0, 4);
 }
 
+function watchButtonLabel(linkType) {
+  if (linkType === 'search') return 'Search videos';
+  if (linkType === 'video') return 'Watch video';
+  return 'Open resource';
+}
+
 function readForFocusAreas(focusRanked) {
   const topAreas = focusRanked.slice(0, 3).map(([a]) => a.toLowerCase());
   if (!topAreas.length) return READ_RESOURCES.slice(0, 3);
@@ -3490,7 +3494,7 @@ function renderImprove() {
       <div class="watch-card-source">${w.source}</div>
       <div class="watch-card-title">${w.title}</div>
       <div class="watch-card-why">${w.why}</div>
-      <a href="${w.url}" target="_blank" rel="noopener noreferrer" class="watch-card-link">Watch ›</a>
+      <a href="${w.url}" target="_blank" rel="noopener noreferrer" class="watch-card-link">${watchButtonLabel(w.linkType)} ›</a>
     </div>`).join('');
 
   // ── Read ──────────────────────────────────────────────────────────────────
