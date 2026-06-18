@@ -543,6 +543,12 @@ html, body { height: 100%; font-family: var(--font); background: var(--page); co
 .rules-link-row:last-child { border-bottom: none; }
 .rules-link-row a { color: var(--season-bg1); font-weight: 600; text-decoration: none; }
 
+/* ── Feed reactions ── */
+.feed-reaction-row { display: flex; flex-wrap: wrap; gap: 5px; margin: 6px 0 2px 30px; }
+.feed-reaction-pill { font-size: 11px; font-weight: 600; padding: 3px 9px; border-radius: 12px; border: 1px solid var(--border); background: var(--page); color: var(--ink3); cursor: pointer; transition: all .12s; font-family: var(--font); }
+.feed-reaction-pill.mine { background: rgba(200,230,58,.18); border-color: var(--season-bg1); color: var(--season-bg2); font-weight: 700; }
+.feed-reaction-pill:active { opacity: .7; }
+
 /* ── Toast ── */
 #toast { position: fixed; bottom: calc(env(safe-area-inset-bottom) + 80px); left: 50%; transform: translateX(-50%) translateY(10px); background: #1a1a1a; color: #fff; padding: 10px 20px; border-radius: 20px; font-size: 13px; font-weight: 600; opacity: 0; transition: all .25s; z-index: 999; white-space: nowrap; pointer-events: none; }
 #toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
@@ -2501,6 +2507,7 @@ function feedExpandedRows(friendItems) {
         <div style="flex:1;font-size:13px;font-weight:${type==='won'?'600':'400'};color:${type==='practice'?'var(--ink3)':'var(--ink2)'};">${label}${scoreHtml}</div>
         <div style="font-size:11px;color:var(--ink4);">${feedDateLabel(it.activity_date)}</div>
       </div>`;
+      html += renderReactionPills(it);
     });
   });
   html += '</div>';
@@ -2509,6 +2516,100 @@ function feedExpandedRows(friendItems) {
 
 // State: which friend card is expanded
 let feedExpandedId = null;
+
+// ── Feed reactions ────────────────────────────────────────────────────────────
+let feedReactions = {}; // key: `${activity_type}:${activity_id}` -> { [reaction_type]: { count, mine } }
+
+const REACTION_LABELS = {
+  nice_win: 'Nice win',
+  good_hit: 'Good hit',
+  rematch: 'Rematch?',
+  lets_play: "Let's play",
+};
+
+function reactionKey(type, id) { return `${type}:${id}`; }
+
+async function loadFeedReactions(items) {
+  if (!items.length) { feedReactions = {}; return; }
+  const allIds = [...new Set(items.map(i => i.activity_id))];
+  if (!allIds.length) { feedReactions = {}; return; }
+  try {
+    const rows = await sbFetch(`/rest/v1/activity_reactions?activity_id=in.(${allIds.join(',')})&select=activity_type,activity_id,reactor_id,reaction_type`);
+    const list = Array.isArray(rows) ? rows : [];
+    const grouped = {};
+    list.forEach(r => {
+      const key = reactionKey(r.activity_type, r.activity_id);
+      if (!grouped[key]) grouped[key] = {};
+      if (!grouped[key][r.reaction_type]) grouped[key][r.reaction_type] = { count: 0, mine: false };
+      grouped[key][r.reaction_type].count++;
+      if (String(r.reactor_id) === String(profile?.id)) grouped[key][r.reaction_type].mine = true;
+    });
+    feedReactions = grouped;
+    console.log('[Courtside] feed reactions loaded:', Object.keys(grouped).length, 'activities with reactions');
+  } catch(e) {
+    console.warn('[Courtside] loadFeedReactions failed:', e.message);
+    feedReactions = {};
+  }
+}
+
+function reactionOptionsFor(it) {
+  const type = feedSummaryType(it);
+  if (it.activity_type === 'practice') return ['good_hit', 'lets_play'];
+  if (type === 'won') return ['nice_win', 'good_hit', 'rematch', 'lets_play'];
+  return ['good_hit', 'rematch', 'lets_play'];
+}
+
+function renderReactionPills(it) {
+  const key = reactionKey(it.activity_type, it.activity_id);
+  const data = feedReactions[key] || {};
+  const options = reactionOptionsFor(it);
+  return `<div class="feed-reaction-row">${options.map(rt => {
+    const d = data[rt] || { count: 0, mine: false };
+    const label = REACTION_LABELS[rt] + (d.count > 1 ? ' ' + d.count : '');
+    return `<button type="button" class="feed-reaction-pill${d.mine ? ' mine' : ''}" onclick="event.stopPropagation();toggleReaction('${it.activity_type}','${it.activity_id}','${rt}',this)">${label}</button>`;
+  }).join('')}</div>`;
+}
+
+async function toggleReaction(activityType, activityId, reactionType, btnEl) {
+  const key = reactionKey(activityType, activityId);
+  const existing = feedReactions[key]?.[reactionType];
+  const alreadyMine = existing?.mine;
+  try {
+    if (alreadyMine) {
+      await sbFetch(
+        `/rest/v1/activity_reactions?activity_type=eq.${activityType}&activity_id=eq.${activityId}&reactor_id=eq.${profile.id}&reaction_type=eq.${reactionType}`,
+        'DELETE'
+      );
+      if (feedReactions[key]?.[reactionType]) {
+        feedReactions[key][reactionType].count = Math.max(0, feedReactions[key][reactionType].count - 1);
+        feedReactions[key][reactionType].mine = false;
+      }
+    } else {
+      await sbFetch('/rest/v1/activity_reactions', 'POST', {
+        activity_type: activityType,
+        activity_id: activityId,
+        reactor_id: profile.id,
+        reaction_type: reactionType,
+      });
+      if (!feedReactions[key]) feedReactions[key] = {};
+      if (!feedReactions[key][reactionType]) feedReactions[key][reactionType] = { count: 0, mine: false };
+      feedReactions[key][reactionType].count++;
+      feedReactions[key][reactionType].mine = true;
+    }
+    // Update just this pill row in place
+    if (btnEl) {
+      const row = btnEl.closest('.feed-reaction-row');
+      if (row) {
+        const d = feedReactions[key][reactionType] || { count: 0, mine: false };
+        const label = REACTION_LABELS[reactionType] + (d.count > 1 ? ' ' + d.count : '');
+        btnEl.textContent = label;
+        btnEl.classList.toggle('mine', d.mine);
+      }
+    }
+  } catch(e) {
+    showToast(e.message || 'Could not update reaction');
+  }
+}
 
 async function renderFeed(el) {
   el.innerHTML = '<div class="club-empty" style="padding:24px 0;">Loading feed…</div>';
@@ -2530,6 +2631,9 @@ async function renderFeed(el) {
       }
       friendMap[item.friend_id].push(item);
     });
+
+    // Load reactions for all visible feed activities
+    await loadFeedReactions(raw);
 
     function renderCards() {
       let html = '';
