@@ -517,6 +517,14 @@ html, body { height: 100%; font-family: var(--font); background: var(--page); co
 .invite-section-label { font-size: 11px; font-weight: 700; letter-spacing: .5px; text-transform: uppercase; color: var(--ink3); margin-bottom: 8px; }
 .invite-note { width: 100%; font-family: var(--font); font-size: 14px; color: var(--ink); background: var(--page); border: 1.5px solid var(--border); border-radius: var(--rsm); padding: 10px 13px; outline: none; resize: none; box-sizing: border-box; margin-bottom: 18px; }
 .invite-note:focus { border-color: var(--season-bg1); }
+.invite-plan-toggle { font-size: 12px; font-weight: 600; color: var(--season-bg1); background: none; border: none; cursor: pointer; font-family: var(--font); padding: 0 0 14px; display: flex; align-items: center; gap: 4px; }
+.invite-plan-fields { display: none; }
+.invite-plan-fields.show { display: block; }
+.invite-field-label { font-size: 11px; font-weight: 700; letter-spacing: .5px; text-transform: uppercase; color: var(--ink3); margin-bottom: 6px; }
+.invite-date-input, .invite-location-input { width: 100%; font-family: var(--font); font-size: 14px; color: var(--ink); background: var(--page); border: 1.5px solid var(--border); border-radius: var(--rsm); padding: 10px 13px; outline: none; box-sizing: border-box; margin-bottom: 14px; }
+.invite-date-input:focus, .invite-location-input:focus { border-color: var(--season-bg1); }
+.invite-time-input-wrap { display: none; margin-bottom: 14px; }
+.invite-time-input-wrap.show { display: block; }
 
 /* ── Invite cards in Friends tab ── */
 .invite-card { background: var(--surface); border-radius: var(--r); border: 1px solid var(--border); padding: 12px 14px; margin-bottom: 8px; }
@@ -985,6 +993,26 @@ html, body { height: 100%; font-family: var(--font); background: var(--page); co
         <button type="button" class="invite-pill" onclick="selectInvitePill('timing',this,'this_weekend')">This weekend</button>
         <button type="button" class="invite-pill" onclick="selectInvitePill('timing',this,'next_week')">Next week</button>
         <button type="button" class="invite-pill" onclick="selectInvitePill('timing',this,'suggest_time')">Suggest a time</button>
+      </div>
+      <button type="button" class="invite-plan-toggle" id="invite-plan-toggle-btn" onclick="togglePlanDetails()">
+        <span id="invite-plan-toggle-icon">+</span> Suggest details
+      </button>
+      <div class="invite-plan-fields" id="invite-plan-fields">
+        <div class="invite-field-label">Date <span style="font-weight:400;text-transform:none;letter-spacing:0;color:var(--ink4);">(optional)</span></div>
+        <input type="date" class="invite-date-input" id="invite-plan-date">
+        <div class="invite-field-label">Time window <span style="font-weight:400;text-transform:none;letter-spacing:0;color:var(--ink4);">(optional)</span></div>
+        <div class="invite-pill-row" id="invite-time-pills">
+          <button type="button" class="invite-pill" onclick="selectTimePill(this,'morning')">Morning</button>
+          <button type="button" class="invite-pill" onclick="selectTimePill(this,'midday')">Midday</button>
+          <button type="button" class="invite-pill" onclick="selectTimePill(this,'afternoon')">Afternoon</button>
+          <button type="button" class="invite-pill" onclick="selectTimePill(this,'evening')">Evening</button>
+          <button type="button" class="invite-pill" onclick="selectTimePill(this,'custom')">Custom</button>
+        </div>
+        <div class="invite-time-input-wrap" id="invite-time-custom-wrap">
+          <input type="text" class="invite-date-input" id="invite-plan-time-custom" placeholder="e.g. 6:30pm">
+        </div>
+        <div class="invite-field-label">Location <span style="font-weight:400;text-transform:none;letter-spacing:0;color:var(--ink4);">(optional)</span></div>
+        <input type="text" class="invite-location-input" id="invite-plan-location" placeholder="e.g. Mercer Island Country Club">
       </div>
       <div class="invite-section-label">Note <span style="font-weight:400;text-transform:none;letter-spacing:0;color:var(--ink4);">(optional)</span></div>
       <textarea class="invite-note" id="invite-note" rows="2" placeholder="Add a quick note…"></textarea>
@@ -1641,6 +1669,32 @@ let hitInvites = [];
 let inviteReceiverId = null;
 let inviteType = 'hit';
 let inviteTiming = 'this_week';
+let invitePlanTime = null;
+
+const TIME_WINDOW_LABELS = { morning: 'Morning', midday: 'Midday', afternoon: 'Afternoon', evening: 'Evening', custom: 'Custom' };
+
+function togglePlanDetails() {
+  const fields = document.getElementById('invite-plan-fields');
+  const icon = document.getElementById('invite-plan-toggle-icon');
+  const isOpen = fields.classList.toggle('show');
+  icon.textContent = isOpen ? '−' : '+';
+}
+
+function selectTimePill(btn, value) {
+  const container = btn.closest('.invite-pill-row');
+  const wasOn = btn.classList.contains('on');
+  container.querySelectorAll('.invite-pill').forEach(b => b.classList.remove('on'));
+  const customWrap = document.getElementById('invite-time-custom-wrap');
+  if (wasOn) {
+    // Tapping the same pill again deselects it
+    invitePlanTime = null;
+    customWrap.classList.remove('show');
+  } else {
+    btn.classList.add('on');
+    invitePlanTime = value;
+    customWrap.classList.toggle('show', value === 'custom');
+  }
+}
 
 function getSeenResponseIds() {
   return new Set(load('cs_seen_invite_responses') || []);
@@ -1717,12 +1771,21 @@ function openInviteSheet(receiverId, receiverName) {
   inviteReceiverId = receiverId;
   inviteType = 'hit';
   inviteTiming = 'this_week';
+  invitePlanTime = null;
   document.getElementById('invite-sheet-title').textContent = `Invite ${receiverName || 'friend'} to hit`;
   document.getElementById('invite-sheet-sub').textContent = 'Want to hit this week?';
   document.getElementById('invite-note').value = '';
   // Reset pills
   document.querySelectorAll('#invite-type-pills .invite-pill').forEach((b,i) => b.classList.toggle('on', i===0));
   document.querySelectorAll('#invite-timing-pills .invite-pill').forEach((b,i) => b.classList.toggle('on', i===1));
+  document.querySelectorAll('#invite-time-pills .invite-pill').forEach(b => b.classList.remove('on'));
+  // Reset plan details fields
+  document.getElementById('invite-plan-date').value = '';
+  document.getElementById('invite-plan-time-custom').value = '';
+  document.getElementById('invite-plan-location').value = '';
+  document.getElementById('invite-time-custom-wrap').classList.remove('show');
+  document.getElementById('invite-plan-fields').classList.remove('show');
+  document.getElementById('invite-plan-toggle-icon').textContent = '+';
   document.getElementById('invite-overlay').classList.add('on');
 }
 
@@ -1748,13 +1811,43 @@ async function submitHitInvite() {
   const btn = document.getElementById('invite-send-btn');
   btn.textContent = 'Sending…'; btn.disabled = true;
   const note = document.getElementById('invite-note').value.trim() || null;
+
+  // Optional plan details
+  const planDate = document.getElementById('invite-plan-date').value || null;
+  const planLocation = document.getElementById('invite-plan-location').value.trim() || null;
+  let planTimeLabel = null;
+  if (invitePlanTime === 'custom') {
+    const custom = document.getElementById('invite-plan-time-custom').value.trim();
+    planTimeLabel = custom || null;
+  } else if (invitePlanTime) {
+    planTimeLabel = TIME_WINDOW_LABELS[invitePlanTime] || null;
+  }
+  const hasPlanDetails = !!(planDate || planTimeLabel || planLocation);
+
   try {
-    await sbFetch('/rest/v1/rpc/send_hit_invite', 'POST', {
+    const inviteId = await sbFetch('/rest/v1/rpc/send_hit_invite', 'POST', {
       p_receiver_id: inviteReceiverId,
       p_invite_type: inviteType,
       p_timing: inviteTiming,
       p_note: note,
     });
+
+    // If plan details were filled in, attach them to the new invite
+    if (hasPlanDetails && inviteId) {
+      const newId = Array.isArray(inviteId) ? inviteId[0] : inviteId;
+      try {
+        await sbFetch('/rest/v1/rpc/propose_hit_plan', 'POST', {
+          p_invite_id: newId,
+          p_proposed_date: planDate,
+          p_proposed_time: planTimeLabel,
+          p_proposed_location: planLocation,
+          p_plan_note: note,
+        });
+      } catch(planErr) {
+        console.warn('[Courtside] propose_hit_plan failed:', planErr.message);
+      }
+    }
+
     closeInviteSheet();
     await loadHitInvites();
     updateClubNavDot();
@@ -1801,6 +1894,17 @@ function inviteTimingLabel(t) {
 
 function inviteTypeLabel(t) {
   return { hit: 'hit', practice: 'practice', match: 'a match', doubles: 'doubles' }[t] || t;
+}
+
+function planDetailsLine(inv) {
+  const parts = [];
+  if (inv.proposed_date) {
+    const d = new Date(inv.proposed_date + 'T12:00:00');
+    parts.push(d.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' }));
+  }
+  if (inv.proposed_location) parts.push(inv.proposed_location);
+  if (inv.proposed_time) parts.push(inv.proposed_time);
+  return parts.join(' · ');
 }
 
 // ── Sound ────────────────────────────────────────────────────────────────────
@@ -2567,10 +2671,10 @@ async function loadReactionsToYou() {
     // Sort newest first by created_at (defensive — API already orders desc)
     list.sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
 
-    // Dedupe: keep only the newest row per reactor_id + reaction_type + activity_type + activity_id
+    // Dedupe: keep only the newest row per reactor_id + reaction_type
     const seen = new Set();
     list = list.filter(r => {
-      const key = `${r.reactor_id}|${r.reaction_type}|${r.activity_type}|${r.activity_id}`;
+      const key = `${r.reactor_id}|${r.reaction_type}`;
       if (seen.has(key)) return false;
       seen.add(key);
       return true;
@@ -2885,8 +2989,10 @@ async function renderFriends(el) {
       const senderName = senderProf?.full_name || 'Someone';
       const typeLbl = inviteTypeLabel(inv.invite_type);
       const timeLbl = inviteTimingLabel(inv.timing);
+      const planLine = planDetailsLine(inv);
       html += `<div class="invite-card">
-        <div class="invite-card-headline">${senderName} invited you to ${typeLbl} ${timeLbl}</div>
+        <div class="invite-card-headline">${senderName} invited you to ${typeLbl}</div>
+        <div class="invite-card-meta">${planLine || timeLbl}</div>
         ${inv.note ? `<div class="invite-card-meta">"${inv.note}"</div>` : ''}
         <div class="invite-card-actions">
           <button class="friend-btn accept" onclick="respondInvite('${inv.id}','accepted')">Accept</button>
@@ -2901,9 +3007,10 @@ async function renderFriends(el) {
       const recvName = recvProf?.full_name || 'friend';
       const typeLbl = inviteTypeLabel(inv.invite_type);
       const timeLbl = inviteTimingLabel(inv.timing);
+      const planLine = planDetailsLine(inv);
       html += `<div class="invite-card">
         <div class="invite-card-headline">Invite sent to ${recvName}</div>
-        <div class="invite-card-meta">${typeLbl} · ${timeLbl}</div>
+        <div class="invite-card-meta">${planLine || `${typeLbl} · ${timeLbl}`}</div>
         <div class="invite-card-actions">
           <span style="font-size:11px;color:var(--ink3);font-weight:600;padding:5px 4px;">Pending</span>
           <button class="friend-btn outline" onclick="cancelInvite('${inv.id}')">Cancel</button>
