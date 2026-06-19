@@ -2559,10 +2559,25 @@ async function loadReactionsToYou() {
 
   try {
     const rows = await sbFetch(
-      `/rest/v1/activity_reactions?activity_id=in.(${myActivityIds.join(',')})&reactor_id=neq.${profile.id}&created_at=gte.${cutoff}&select=*&order=created_at.desc&limit=20`
+      `/rest/v1/activity_reactions?activity_id=in.(${myActivityIds.join(',')})&reactor_id=neq.${profile.id}&created_at=gte.${cutoff}&select=*&order=created_at.desc&limit=50`
     );
-    const list = Array.isArray(rows) ? rows : [];
+    let list = Array.isArray(rows) ? rows : [];
     if (!list.length) return;
+
+    // Sort newest first by created_at (defensive — API already orders desc)
+    list.sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
+
+    // Dedupe: keep only the newest row per reactor_id + reaction_type + activity_type + activity_id
+    const seen = new Set();
+    list = list.filter(r => {
+      const key = `${r.reactor_id}|${r.reaction_type}|${r.activity_type}|${r.activity_id}`;
+      if (seen.has(key)) return false;
+      seen.add(key);
+      return true;
+    });
+
+    // Limit to 3 visible cards
+    list = list.slice(0, 3);
 
     // Look up reactor names
     const reactorIds = [...new Set(list.map(r => r.reactor_id))];
@@ -2578,7 +2593,7 @@ async function loadReactionsToYou() {
     const entryById = {};
     allEntries.forEach(e => { entryById[e.id] = e; });
 
-    reactionsToYou = list.slice(0, 5).map(r => {
+    reactionsToYou = list.map(r => {
       const entry = entryById[r.activity_id];
       const reactorName = reactorProfiles[r.reactor_id]?.full_name || 'A friend';
       return {
@@ -2590,22 +2605,30 @@ async function loadReactionsToYou() {
         createdAt: r.created_at,
       };
     });
-    console.log('[Courtside] reactionsToYou loaded:', reactionsToYou.length);
+    console.log('[Courtside] reactionsToYou loaded (deduped, max 3):', reactionsToYou.length);
   } catch(e) {
     console.warn('[Courtside] loadReactionsToYou failed:', e.message);
     reactionsToYou = [];
   }
 }
 
+function reactionHeadline(reactorName, reactionType) {
+  if (reactionType === 'lets_play') return `${reactorName} wants to play`;
+  if (reactionType === 'good_hit') return `${reactorName} said good hit`;
+  if (reactionType === 'nice_win') return `${reactorName} liked your win`;
+  if (reactionType === 'rematch') return `${reactorName} wants a rematch`;
+  return `${reactorName} reacted`;
+}
+
 function renderReactionsToYouSection() {
   if (!reactionsToYou.length) return '';
   const cards = reactionsToYou.map(r => {
-    const label = REACTION_LABELS[r.reactionType] || r.reactionType;
-    const onWhat = r.activityKind === 'match' ? 'on your match' : 'on your practice';
+    const onWhat = r.activityKind === 'match' ? 'your match' : 'your practice';
     const dateLabel = r.activityDate ? feedDateLabel(r.activityDate) : '';
+    const headline = reactionHeadline(r.reactorName, r.reactionType);
     return `<div class="invite-response-card">
-      <div class="invite-response-headline">${r.reactorName} reacted: ${label} <span style="color:var(--ink3);font-weight:400;">${onWhat}</span></div>
-      ${dateLabel ? `<div style="font-size:11px;color:var(--ink4);margin-top:2px;">${dateLabel}</div>` : ''}
+      <div class="invite-response-headline">${headline}</div>
+      <div style="font-size:11px;color:var(--ink3);margin-top:2px;">Reacted to ${onWhat}${dateLabel ? ` · ${dateLabel}` : ''}</div>
     </div>`;
   }).join('');
   return `<div class="friend-section-label">Reactions to you</div>${cards}`;
