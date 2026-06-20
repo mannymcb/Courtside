@@ -526,6 +526,32 @@ html, body { height: 100%; font-family: var(--font); background: var(--page); co
 .invite-time-input-wrap { display: none; margin-bottom: 14px; }
 .invite-time-input-wrap.show { display: block; }
 
+/* ── Chat sheet ── */
+.chat-overlay { position: fixed; inset: 0; background: rgba(0,0,0,.45); z-index: 610; display: flex; align-items: flex-end; opacity: 0; pointer-events: none; transition: opacity .25s; }
+.chat-overlay.on { opacity: 1; pointer-events: all; }
+.chat-sheet { background: var(--surface); border-radius: 18px 18px 0 0; width: 100%; height: 82vh; max-height: 82vh; display: flex; flex-direction: column; transform: translateY(100%); transition: transform .28s cubic-bezier(0.32,0.72,0,1); }
+.chat-overlay.on .chat-sheet { transform: translateY(0); }
+.chat-header { display: flex; align-items: center; justify-content: space-between; padding: 14px 16px; border-bottom: 1px solid var(--border); flex-shrink: 0; }
+.chat-header-name { font-size: 15px; font-weight: 800; color: var(--ink); }
+.chat-close-btn { background: none; border: none; font-size: 22px; color: var(--ink3); cursor: pointer; line-height: 1; padding: 0 4px; }
+.chat-body { flex: 1; overflow-y: auto; padding: 14px 14px 8px; display: flex; flex-direction: column; gap: 8px; }
+.chat-bubble-row { display: flex; }
+.chat-bubble-row.mine { justify-content: flex-end; }
+.chat-bubble-row.theirs { justify-content: flex-start; }
+.chat-bubble { max-width: 78%; padding: 8px 13px; border-radius: 16px; font-size: 14px; line-height: 1.4; }
+.chat-bubble-row.mine .chat-bubble { background: var(--season-bg1); color: #fff; border-bottom-right-radius: 4px; }
+.chat-bubble-row.theirs .chat-bubble { background: var(--page); color: var(--ink); border-bottom-left-radius: 4px; }
+.chat-bubble-time { font-size: 10px; color: var(--ink4); margin-top: 3px; text-align: center; }
+.chat-composer { display: flex; gap: 8px; align-items: flex-end; padding: 10px 12px; border-top: 1px solid var(--border); flex-shrink: 0; }
+.chat-input { flex: 1; font-family: var(--font); font-size: 14px; color: var(--ink); background: var(--page); border: 1.5px solid var(--border); border-radius: 18px; padding: 9px 15px; outline: none; resize: none; max-height: 80px; box-sizing: border-box; }
+.chat-input:focus { border-color: var(--season-bg1); }
+.chat-send-btn { background: var(--season-bg1); color: #fff; border: none; border-radius: 50%; width: 36px; height: 36px; flex-shrink: 0; cursor: pointer; display: flex; align-items: center; justify-content: center; }
+.chat-send-btn:disabled { opacity: .4; cursor: default; }
+.chat-empty { text-align: center; color: var(--ink3); font-size: 13px; padding: 40px 20px; }
+
+/* ── Unread dot for friend rows ── */
+.friend-row-unread-dot { width: 8px; height: 8px; border-radius: 50%; background: #e74c3c; flex-shrink: 0; }
+
 /* ── Invite cards in Friends tab ── */
 .invite-card { background: var(--surface); border-radius: var(--r); border: 1px solid var(--border); padding: 12px 14px; margin-bottom: 8px; }
 .invite-card-headline { font-size: 13px; font-weight: 600; color: var(--ink); margin-bottom: 6px; }
@@ -1020,6 +1046,23 @@ html, body { height: 100%; font-family: var(--font); background: var(--page); co
       <button type="button" onclick="closeInviteSheet()" style="width:100%;background:none;border:none;font-family:var(--font);font-size:13px;font-weight:600;color:var(--ink3);cursor:pointer;padding:12px 0 0;">Cancel</button>
     </div>
   </div>
+  <!-- CHAT SHEET -->
+  <div class="chat-overlay" id="chat-overlay" onclick="if(event.target===this)closeChatSheet()">
+    <div class="chat-sheet">
+      <div class="chat-header">
+        <div class="chat-header-name" id="chat-header-name">Chat</div>
+        <button type="button" class="chat-close-btn" onclick="closeChatSheet()">×</button>
+      </div>
+      <div class="chat-body" id="chat-body"></div>
+      <div class="chat-composer">
+        <textarea class="chat-input" id="chat-input" rows="1" placeholder="Message…" oninput="onChatInputChange()" onkeydown="onChatInputKeydown(event)"></textarea>
+        <button type="button" class="chat-send-btn" id="chat-send-btn" onclick="sendChatMessage()" disabled>
+          <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg>
+        </button>
+      </div>
+    </div>
+  </div>
+
   <div class="success-overlay" id="success-overlay">
     <div class="success-icon" id="success-icon"></div>
     <div id="success-title" style="font-size:15px;font-weight:700;"></div>
@@ -1743,7 +1786,10 @@ function computeClubAttentionCount() {
     f.status === 'pending' && String(f.requester_id) !== myId
   ).length;
 
-  return incomingPending + respondedUnseen + incomingFriendReqs;
+  // 4. Unread chat messages
+  const unreadMessages = totalUnreadCount();
+
+  return incomingPending + respondedUnseen + incomingFriendReqs + unreadMessages;
 }
 
 function updateClubNavDot() {
@@ -1886,6 +1932,146 @@ async function cancelInvite(inviteId) {
     if (el && clubActiveTab === 'friends') await renderFriends(el);
     showToast('Invite cancelled');
   } catch(e) { showToast(e.message || 'Could not cancel'); }
+}
+
+// ── Chat ─────────────────────────────────────────────────────────────────────
+let chatThread = [];
+let chatFriendId = null;
+let chatFriendName = null;
+let unreadBySender = {}; // { sender_id: count }
+
+async function loadUnreadCounts() {
+  unreadBySender = {};
+  if (!profile?.id) return;
+  try {
+    const rows = await sbFetch(
+      `/rest/v1/chat_messages?receiver_id=eq.${profile.id}&read_at=is.null&select=sender_id`
+    );
+    const list = Array.isArray(rows) ? rows : [];
+    list.forEach(r => {
+      unreadBySender[r.sender_id] = (unreadBySender[r.sender_id] || 0) + 1;
+    });
+    console.log('[Courtside] unread counts:', unreadBySender);
+  } catch(e) {
+    console.warn('[Courtside] loadUnreadCounts failed:', e.message);
+    unreadBySender = {};
+  }
+}
+
+function totalUnreadCount() {
+  return Object.values(unreadBySender).reduce((a, b) => a + b, 0);
+}
+
+async function openChatSheet(friendId, friendName) {
+  chatFriendId = friendId;
+  chatFriendName = friendName || 'Friend';
+  document.getElementById('chat-header-name').textContent = chatFriendName;
+  document.getElementById('chat-body').innerHTML = '<div class="chat-empty">Loading…</div>';
+  document.getElementById('chat-input').value = '';
+  updateChatSendState();
+  document.getElementById('chat-overlay').classList.add('on');
+
+  await loadChatThread(friendId);
+  // Mark as read, then refresh unread state across the app
+  try {
+    await sbFetch('/rest/v1/rpc/mark_chat_read', 'POST', { p_friend_id: friendId });
+  } catch(e) { console.warn('[Courtside] mark_chat_read failed:', e.message); }
+  await loadUnreadCounts();
+  updateClubNavDot();
+  // Re-render friends tab if currently visible, to clear the unread dot
+  const el = document.getElementById('club-tab-content');
+  if (el && clubActiveTab === 'friends') await renderFriends(el);
+}
+
+function closeChatSheet() {
+  document.getElementById('chat-overlay').classList.remove('on');
+  chatFriendId = null;
+  chatFriendName = null;
+}
+
+async function loadChatThread(friendId) {
+  try {
+    const rows = await sbFetch('/rest/v1/rpc/get_chat_thread', 'POST', { p_friend_id: friendId });
+    chatThread = Array.isArray(rows) ? rows : [];
+    renderChatThread();
+  } catch(e) {
+    document.getElementById('chat-body').innerHTML = `<div class="chat-empty">Could not load messages.<br><button onclick="loadChatThread('${friendId}')" style="margin-top:8px;background:var(--season-bg1);color:#fff;border:none;border-radius:var(--r);padding:7px 16px;font-family:var(--font);font-size:12px;font-weight:600;cursor:pointer;">↻ Retry</button></div>`;
+    console.warn('[Courtside] loadChatThread failed:', e.message);
+  }
+}
+
+function chatBubbleTime(iso) {
+  const d = new Date(iso);
+  return d.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' });
+}
+
+function renderChatThread() {
+  const body = document.getElementById('chat-body');
+  if (!chatThread.length) {
+    body.innerHTML = `<div class="chat-empty">No messages yet. Say hello 👋</div>`;
+    return;
+  }
+  const myId = String(profile.id);
+  body.innerHTML = chatThread.map(m => {
+    const mine = String(m.sender_id) === myId;
+    return `<div class="chat-bubble-row ${mine ? 'mine' : 'theirs'}">
+      <div>
+        <div class="chat-bubble">${escapeHtml(m.body)}</div>
+        <div class="chat-bubble-time">${chatBubbleTime(m.created_at)}</div>
+      </div>
+    </div>`;
+  }).join('');
+  body.scrollTop = body.scrollHeight;
+}
+
+function escapeHtml(s) {
+  const d = document.createElement('div');
+  d.textContent = s || '';
+  return d.innerHTML;
+}
+
+function onChatInputChange() {
+  updateChatSendState();
+}
+
+function updateChatSendState() {
+  const input = document.getElementById('chat-input');
+  const btn = document.getElementById('chat-send-btn');
+  btn.disabled = !input.value.trim();
+}
+
+function onChatInputKeydown(e) {
+  if (e.key === 'Enter' && !e.shiftKey) {
+    e.preventDefault();
+    sendChatMessage();
+  }
+}
+
+async function sendChatMessage() {
+  const input = document.getElementById('chat-input');
+  const body = input.value.trim();
+  if (!body || !chatFriendId) return;
+  const btn = document.getElementById('chat-send-btn');
+  btn.disabled = true;
+  try {
+    await sbFetch('/rest/v1/rpc/send_chat_message', 'POST', {
+      p_receiver_id: chatFriendId,
+      p_body: body,
+    });
+    input.value = '';
+    // Optimistic local append
+    chatThread.push({
+      sender_id: profile.id,
+      receiver_id: chatFriendId,
+      body,
+      created_at: new Date().toISOString(),
+    });
+    renderChatThread();
+  } catch(e) {
+    showToast(e.message || 'Could not send message');
+  } finally {
+    updateChatSendState();
+  }
 }
 
 function inviteTimingLabel(t) {
@@ -2954,7 +3140,7 @@ async function renderFriends(el) {
     } catch(e) { console.warn('[Courtside] friend profiles load:', e.message); }
   }
 
-  function friendRow(f, otherId, actions) {
+  function friendRow(f, otherId, actions, showUnread) {
     const p = friendProfiles[otherId] || {};
     const ini = (p.full_name || '?').split(' ').map(w => w[0]).join('').slice(0,2).toUpperCase();
     const pBg = p.avatar_color || 'var(--season-bg1)';
@@ -2968,13 +3154,14 @@ async function renderFriends(el) {
         `</div>`
       : `<div style="${pStyle}background:${pBg};color:${pFg};display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:800;">${ini}</div>`;
     const meta = p.show_usta_rating && p.usta_rating ? `USTA ${p.usta_rating}` : '';
+    const unreadCount = showUnread ? (unreadBySender[otherId] || 0) : 0;
     return `<div class="friend-row">
       ${av}
       <div class="friend-row-info">
-        <div class="friend-row-name">${p.full_name || '—'}</div>
+        <div class="friend-row-name">${p.full_name || '—'}${unreadCount > 0 ? ' <span class=\'friend-row-unread-dot\' style=\'display:inline-block;margin-left:5px;vertical-align:middle;\'></span>' : ''}</div>
         ${meta ? `<div class="friend-row-meta">${meta}</div>` : ''}
       </div>
-      <div style="display:flex;gap:6px;flex-shrink:0;">${actions}</div>
+      <div style="display:flex;gap:6px;flex-shrink:0;align-items:center;">${actions}</div>
     </div>`;
   }
 
@@ -2987,9 +3174,11 @@ async function renderFriends(el) {
     myIncomingInvites.forEach(inv => {
       const senderProf = friendProfiles[inv.sender_id];
       const senderName = senderProf?.full_name || 'Someone';
+      const safeSenderName = senderName.replace(/'/g, "\\'");
       const typeLbl = inviteTypeLabel(inv.invite_type);
       const timeLbl = inviteTimingLabel(inv.timing);
       const planLine = planDetailsLine(inv);
+      const isFriendNow = friendshipStatus(inv.sender_id)?.status === 'accepted';
       html += `<div class="invite-card">
         <div class="invite-card-headline">${senderName} invited you to ${typeLbl}</div>
         <div class="invite-card-meta">${planLine || timeLbl}</div>
@@ -2998,6 +3187,7 @@ async function renderFriends(el) {
           <button class="friend-btn accept" onclick="respondInvite('${inv.id}','accepted')">Accept</button>
           <button class="friend-btn outline" onclick="respondInvite('${inv.id}','maybe')">Maybe</button>
           <button class="friend-btn outline" onclick="respondInvite('${inv.id}','declined')">Decline</button>
+          ${isFriendNow ? `<button class="friend-btn outline" onclick="openChatSheet('${inv.sender_id}','${safeSenderName}')">Chat</button>` : ''}
         </div>
       </div>`;
     });
@@ -3005,15 +3195,18 @@ async function renderFriends(el) {
     myOutgoingInvites.forEach(inv => {
       const recvProf = friendProfiles[inv.receiver_id] || {};
       const recvName = recvProf?.full_name || 'friend';
+      const safeRecvName = recvName.replace(/'/g, "\\'");
       const typeLbl = inviteTypeLabel(inv.invite_type);
       const timeLbl = inviteTimingLabel(inv.timing);
       const planLine = planDetailsLine(inv);
+      const isFriendNow = friendshipStatus(inv.receiver_id)?.status === 'accepted';
       html += `<div class="invite-card">
         <div class="invite-card-headline">Invite sent to ${recvName}</div>
         <div class="invite-card-meta">${planLine || `${typeLbl} · ${timeLbl}`}</div>
         <div class="invite-card-actions">
           <span style="font-size:11px;color:var(--ink3);font-weight:600;padding:5px 4px;">Pending</span>
           <button class="friend-btn outline" onclick="cancelInvite('${inv.id}')">Cancel</button>
+          ${isFriendNow ? `<button class="friend-btn outline" onclick="openChatSheet('${inv.receiver_id}','${safeRecvName}')">Chat</button>` : ''}
         </div>
       </div>`;
     });
@@ -3022,12 +3215,16 @@ async function renderFriends(el) {
     myRespondedInvites.forEach(inv => {
       const recvProf = friendProfiles[inv.receiver_id] || {};
       const recvName = recvProf?.full_name || 'A friend';
+      const safeRecvName2 = recvName.replace(/'/g, "\\'");
       const headline = inv.status === 'accepted' ? `${recvName} accepted your invite`
         : inv.status === 'maybe' ? `${recvName} said maybe`
         : `${recvName} declined your invite`;
       const pillLabel = inv.status === 'accepted' ? 'Accepted' : inv.status === 'maybe' ? 'Maybe' : 'Declined';
+      const isFriendNow2 = friendshipStatus(inv.receiver_id)?.status === 'accepted';
+      const showChat2 = isFriendNow2 && (inv.status === 'accepted' || inv.status === 'maybe');
       html += `<div class="invite-response-card">
         <div class="invite-response-headline">${headline}<span class="invite-response-pill ${inv.status}">${pillLabel}</span></div>
+        ${showChat2 ? `<button class="friend-btn outline" style="margin-top:8px;" onclick="openChatSheet('${inv.receiver_id}','${safeRecvName2}')">Chat</button>` : ''}
       </div>`;
     });
   }
@@ -3044,8 +3241,11 @@ async function renderFriends(el) {
     html += `<div class="friend-section-label">Friends</div>`;
     html += accepted.map(f => {
       const otherId = f.user_a === myId ? f.user_b : f.user_a;
+      const otherName = (friendProfiles[otherId]?.full_name || 'Friend').replace(/'/g, "\\'");
       return friendRow(f, otherId,
-        `<button class="friend-btn outline" onclick="friendAction('remove','${f.id}')">Remove</button>`
+        `<button class="friend-btn primary" onclick="openChatSheet('${otherId}','${otherName}')">Chat</button>` +
+        `<button class="friend-btn outline" onclick="friendAction('remove','${f.id}')">Remove</button>`,
+        true
       );
     }).join('');
   }
@@ -3317,9 +3517,9 @@ function buildPlayerCardHtml(p, activityItems) {
   if (!fs) {
     friendAction = `<button class="friend-btn primary" style="flex:1;" onclick="sendFriendRequest('${p.id}');closeProfile();">Add friend</button>`;
   } else if (fs.status === 'accepted') {
-    friendAction = `<span style="font-size:12px;color:var(--ink3);font-weight:600;flex:1;text-align:center;padding:8px 0;">Friends ✓</span><button class="friend-btn outline" onclick="friendAction('remove','${fs.id}');closeProfile();">Remove</button>`;
-    // Add invite button separately so it sits in its own row
-    friendAction = `<button class="friend-btn primary" style="flex:1;" onclick="closeProfile();openInviteSheet('${p.id}','${(p.full_name||'').replace(/'/g,"\\'")}');">Invite to hit</button>` +
+    const safeName = (p.full_name || '').replace(/'/g,"\\'");
+    friendAction = `<button class="friend-btn primary" style="flex:1;" onclick="closeProfile();openInviteSheet('${p.id}','${safeName}');">Invite to hit</button>` +
+      `<button class="friend-btn primary" onclick="closeProfile();openChatSheet('${p.id}','${safeName}');">Chat</button>` +
       `<button class="friend-btn outline" onclick="friendAction('remove','${fs.id}');closeProfile();">Remove</button>`;
   } else if (fs.status === 'pending' && fs.iRequested) {
     friendAction = `<span style="font-size:12px;color:var(--ink3);font-weight:600;flex:1;text-align:center;padding:8px 0;">Request sent</span><button class="friend-btn outline" onclick="friendAction('cancel','${fs.id}');closeProfile();">Cancel</button>`;
@@ -4140,7 +4340,7 @@ async function initializeApp() {
 
   // Step 5: Load all app data (matches, practices, insights)
   hideLoading();
-  await Promise.all([loadAppData(), loadActivityPrivacy().catch(()=>{}), loadFriendships().catch(()=>{}), loadHitInvites().catch(()=>{})]);
+  await Promise.all([loadAppData(), loadActivityPrivacy().catch(()=>{}), loadFriendships().catch(()=>{}), loadHitInvites().catch(()=>{}), loadUnreadCounts().catch(()=>{})]);
   updateClubNavDot();
   console.log('[Courtside] initializeApp complete');
 }
