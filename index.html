@@ -552,6 +552,12 @@ html, body { height: 100%; font-family: var(--font); background: var(--page); co
 /* ── Unread dot for friend rows ── */
 .friend-row-unread-dot { width: 8px; height: 8px; border-radius: 50%; background: #e74c3c; flex-shrink: 0; }
 
+/* ── Invite friends sheet ── */
+.if-sheet-icon { font-size: 32px; text-align: center; margin-bottom: 10px; }
+.if-sheet-title { font-size: 17px; font-weight: 800; color: var(--ink); text-align: center; margin-bottom: 6px; }
+.if-sheet-copy { font-size: 14px; color: var(--ink2); text-align: center; margin-bottom: 4px; }
+.if-sheet-subcopy { font-size: 12px; color: var(--ink3); text-align: center; margin-bottom: 20px; line-height: 1.5; }
+
 /* ── Invite cards in Friends tab ── */
 .invite-card { background: var(--surface); border-radius: var(--r); border: 1px solid var(--border); padding: 12px 14px; margin-bottom: 8px; }
 .invite-card-headline { font-size: 13px; font-weight: 600; color: var(--ink); margin-bottom: 6px; }
@@ -1044,6 +1050,19 @@ html, body { height: 100%; font-family: var(--font); background: var(--page); co
       <textarea class="invite-note" id="invite-note" rows="2" placeholder="Add a quick note…"></textarea>
       <button class="save-log-btn" id="invite-send-btn" onclick="submitHitInvite()">Send invite</button>
       <button type="button" onclick="closeInviteSheet()" style="width:100%;background:none;border:none;font-family:var(--font);font-size:13px;font-weight:600;color:var(--ink3);cursor:pointer;padding:12px 0 0;">Cancel</button>
+    </div>
+  </div>
+
+  <!-- INVITE FRIENDS SHEET -->
+  <div class="invite-overlay" id="invite-friends-overlay" onclick="if(event.target===this)closeInviteFriendsSheet()">
+    <div class="invite-sheet">
+      <div class="if-sheet-icon">🎾</div>
+      <div class="if-sheet-title">Invite friends</div>
+      <div class="if-sheet-copy">Bring your tennis crew in.</div>
+      <div class="if-sheet-subcopy">Track matches, plan hits, chat, and keep the group moving.</div>
+      <button class="save-log-btn" onclick="shareInviteLink()">Share invite</button>
+      <button type="button" onclick="copyInviteLink()" style="width:100%;background:var(--page);border:1.5px solid var(--border);border-radius:var(--r);padding:12px;font-family:var(--font);font-size:14px;font-weight:600;cursor:pointer;color:var(--ink2);margin-top:8px;">Copy link</button>
+      <button type="button" onclick="closeInviteFriendsSheet()" style="width:100%;background:none;border:none;font-family:var(--font);font-size:13px;font-weight:600;color:var(--ink3);cursor:pointer;padding:12px 0 0;">Cancel</button>
     </div>
   </div>
   <!-- CHAT SHEET -->
@@ -1932,6 +1951,62 @@ async function cancelInvite(inviteId) {
     if (el && clubActiveTab === 'friends') await renderFriends(el);
     showToast('Invite cancelled');
   } catch(e) { showToast(e.message || 'Could not cancel'); }
+}
+
+// ── Invite friends ────────────────────────────────────────────────────────────
+const COURTSIDE_INVITE_URL = 'https://mannymcb.github.io/Courtside/';
+
+function openInviteFriendsSheet() {
+  document.getElementById('invite-friends-overlay').classList.add('on');
+}
+
+function closeInviteFriendsSheet() {
+  document.getElementById('invite-friends-overlay').classList.remove('on');
+}
+
+async function shareInviteLink() {
+  const shareData = {
+    title: 'Courtside',
+    text: 'Bring your tennis crew in — track matches, plan hits, and chat on Courtside.',
+    url: COURTSIDE_INVITE_URL,
+  };
+  if (navigator.share) {
+    try {
+      await navigator.share(shareData);
+      closeInviteFriendsSheet();
+    } catch(e) {
+      // User cancelled the share sheet — no error toast needed
+      if (e.name !== 'AbortError') {
+        copyInviteLink();
+      }
+    }
+  } else {
+    copyInviteLink();
+  }
+}
+
+async function copyInviteLink() {
+  try {
+    await navigator.clipboard.writeText(COURTSIDE_INVITE_URL);
+    showToast('Invite link copied');
+    closeInviteFriendsSheet();
+  } catch(e) {
+    // Fallback for older browsers without clipboard API
+    try {
+      const ta = document.createElement('textarea');
+      ta.value = COURTSIDE_INVITE_URL;
+      ta.style.position = 'fixed';
+      ta.style.opacity = '0';
+      document.body.appendChild(ta);
+      ta.select();
+      document.execCommand('copy');
+      document.body.removeChild(ta);
+      showToast('Invite copied');
+      closeInviteFriendsSheet();
+    } catch(e2) {
+      showToast('Could not copy invite link');
+    }
+  }
 }
 
 // ── Chat ─────────────────────────────────────────────────────────────────────
@@ -3184,6 +3259,9 @@ async function renderFriends(el) {
   }
 
   let html = '';
+
+  // ── Invite friends button ──────────────────────────────────────────────────
+  html += `<button type="button" class="friend-btn outline" style="width:100%;margin-bottom:14px;padding:10px;font-size:13px;" onclick="openInviteFriendsSheet()">Invite friends</button>`;
 
   // ── Invites section ────────────────────────────────────────────────────────
   if (myIncomingInvites.length || myOutgoingInvites.length || myRespondedInvites.length) {
