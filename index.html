@@ -527,9 +527,9 @@ html, body { height: 100%; font-family: var(--font); background: var(--page); co
 .invite-time-input-wrap.show { display: block; }
 
 /* ── Chat sheet ── */
-.chat-overlay { position: fixed; inset: 0; background: rgba(0,0,0,.45); z-index: 610; display: flex; align-items: flex-end; opacity: 0; pointer-events: none; transition: opacity .25s; }
+.chat-overlay { position: fixed; inset: 0; background: rgba(0,0,0,.45); z-index: 610; display: flex; align-items: flex-end; justify-content: center; opacity: 0; pointer-events: none; transition: opacity .25s; }
 .chat-overlay.on { opacity: 1; pointer-events: all; }
-.chat-sheet { background: var(--surface); border-radius: 18px 18px 0 0; width: 100%; height: 82vh; max-height: 82vh; display: flex; flex-direction: column; transform: translateY(100%); transition: transform .28s cubic-bezier(0.32,0.72,0,1); }
+.chat-sheet { background: var(--surface); border-radius: 18px 18px 0 0; width: 100%; max-width: 460px; height: 66vh; max-height: 680px; margin: 0 auto; display: flex; flex-direction: column; transform: translateY(100%); transition: transform .28s cubic-bezier(0.32,0.72,0,1); }
 .chat-overlay.on .chat-sheet { transform: translateY(0); }
 .chat-header { display: flex; align-items: center; justify-content: space-between; padding: 14px 16px; border-bottom: 1px solid var(--border); flex-shrink: 0; }
 .chat-header-name { font-size: 15px; font-weight: 800; color: var(--ink); }
@@ -1939,23 +1939,35 @@ let chatThread = [];
 let chatFriendId = null;
 let chatFriendName = null;
 let unreadBySender = {}; // { sender_id: count }
+let unreadPreviewBySender = {}; // { sender_id: latest unread message body }
 
 async function loadUnreadCounts() {
   unreadBySender = {};
+  unreadPreviewBySender = {};
   if (!profile?.id) return;
   try {
     const rows = await sbFetch(
-      `/rest/v1/chat_messages?receiver_id=eq.${profile.id}&read_at=is.null&select=sender_id`
+      `/rest/v1/chat_messages?receiver_id=eq.${profile.id}&read_at=is.null&select=sender_id,body,created_at&order=created_at.desc`
     );
     const list = Array.isArray(rows) ? rows : [];
     list.forEach(r => {
       unreadBySender[r.sender_id] = (unreadBySender[r.sender_id] || 0) + 1;
+      // Rows are ordered newest-first, so the first one seen per sender is the latest
+      if (!unreadPreviewBySender[r.sender_id]) {
+        unreadPreviewBySender[r.sender_id] = r.body;
+      }
     });
     console.log('[Courtside] unread counts:', unreadBySender);
   } catch(e) {
     console.warn('[Courtside] loadUnreadCounts failed:', e.message);
     unreadBySender = {};
+    unreadPreviewBySender = {};
   }
+}
+
+function truncatePreview(s, max = 60) {
+  if (!s) return '';
+  return s.length > max ? s.slice(0, max).trimEnd() + '…' : s;
 }
 
 function totalUnreadCount() {
@@ -3155,11 +3167,17 @@ async function renderFriends(el) {
       : `<div style="${pStyle}background:${pBg};color:${pFg};display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:800;">${ini}</div>`;
     const meta = p.show_usta_rating && p.usta_rating ? `USTA ${p.usta_rating}` : '';
     const unreadCount = showUnread ? (unreadBySender[otherId] || 0) : 0;
+    const hasUnread = unreadCount > 0;
+    const previewText = hasUnread ? escapeHtml(truncatePreview(unreadPreviewBySender[otherId])) : '';
+    const nameHtml = `${p.full_name || '—'}${hasUnread ? ` <span class="friend-row-unread-dot" style="display:inline-block;margin-left:5px;vertical-align:middle;"></span>` : ''}`;
+    const secondLine = hasUnread
+      ? `<div style="font-size:12px;color:var(--ink2);font-weight:600;margin-top:1px;">New message: ${previewText}</div>`
+      : (meta ? `<div class="friend-row-meta">${meta}</div>` : '');
     return `<div class="friend-row">
       ${av}
       <div class="friend-row-info">
-        <div class="friend-row-name">${p.full_name || '—'}${unreadCount > 0 ? ' <span class=\'friend-row-unread-dot\' style=\'display:inline-block;margin-left:5px;vertical-align:middle;\'></span>' : ''}</div>
-        ${meta ? `<div class="friend-row-meta">${meta}</div>` : ''}
+        <div class="friend-row-name" style="${hasUnread ? 'font-weight:800;' : ''}">${nameHtml}</div>
+        ${secondLine}
       </div>
       <div style="display:flex;gap:6px;flex-shrink:0;align-items:center;">${actions}</div>
     </div>`;
