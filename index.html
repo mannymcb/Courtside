@@ -570,7 +570,7 @@ html, body { height: 100%; font-family: var(--font); background: var(--page); co
 .nb-dot.show { display: block; }
 
 /* ── Invite response cards ── */
-.invite-response-card { background: var(--page); border-radius: var(--r); border: 1px solid var(--border); padding: 11px 14px; margin-bottom: 8px; }
+.invite-response-card { background: var(--page); border-radius: var(--rsm); border: 1px solid var(--border); padding: 8px 12px; margin-bottom: 6px; opacity: .85; }
 .invite-response-headline { font-size: 13px; color: var(--ink2); }
 .invite-response-pill { display: inline-block; font-size: 10px; font-weight: 700; border-radius: 10px; padding: 2px 8px; margin-left: 6px; }
 .invite-response-pill.accepted { background: rgba(39,174,96,.15); color: #1e8449; }
@@ -3261,7 +3261,7 @@ async function renderFriends(el) {
   let html = '';
 
   // ── Invite friends button ──────────────────────────────────────────────────
-  html += `<button type="button" class="friend-btn outline" style="width:100%;margin-bottom:14px;padding:10px;font-size:13px;" onclick="openInviteFriendsSheet()">Invite friends</button>`;
+  html += `<div style="margin-bottom:14px;"><button type="button" onclick="openInviteFriendsSheet()" style="background:none;border:none;font-family:var(--font);font-size:13px;font-weight:700;color:var(--season-bg1);cursor:pointer;padding:0;">Invite friends →</button></div>`;
 
   // ── Invites section ────────────────────────────────────────────────────────
   if (myIncomingInvites.length || myOutgoingInvites.length || myRespondedInvites.length) {
@@ -3283,7 +3283,7 @@ async function renderFriends(el) {
           <button class="friend-btn accept" onclick="respondInvite('${inv.id}','accepted')">Accept</button>
           <button class="friend-btn outline" onclick="respondInvite('${inv.id}','maybe')">Maybe</button>
           <button class="friend-btn outline" onclick="respondInvite('${inv.id}','declined')">Decline</button>
-          ${isFriendNow ? `<button class="friend-btn outline" onclick="openChatSheet('${inv.sender_id}','${safeSenderName}')">Chat</button>` : ''}
+          ${isFriendNow ? `<button class="friend-btn primary" onclick="openChatSheet('${inv.sender_id}','${safeSenderName}')">Chat</button>` : ''}
         </div>
       </div>`;
     });
@@ -3302,7 +3302,7 @@ async function renderFriends(el) {
         <div class="invite-card-actions">
           <span style="font-size:11px;color:var(--ink3);font-weight:600;padding:5px 4px;">Pending</span>
           <button class="friend-btn outline" onclick="cancelInvite('${inv.id}')">Cancel</button>
-          ${isFriendNow ? `<button class="friend-btn outline" onclick="openChatSheet('${inv.receiver_id}','${safeRecvName}')">Chat</button>` : ''}
+          ${isFriendNow ? `<button class="friend-btn primary" onclick="openChatSheet('${inv.receiver_id}','${safeRecvName}')">Chat</button>` : ''}
         </div>
       </div>`;
     });
@@ -3319,8 +3319,7 @@ async function renderFriends(el) {
       const isFriendNow2 = friendshipStatus(inv.receiver_id)?.status === 'accepted';
       const showChat2 = isFriendNow2 && (inv.status === 'accepted' || inv.status === 'maybe');
       html += `<div class="invite-response-card">
-        <div class="invite-response-headline">${headline}<span class="invite-response-pill ${inv.status}">${pillLabel}</span></div>
-        ${showChat2 ? `<button class="friend-btn outline" style="margin-top:8px;" onclick="openChatSheet('${inv.receiver_id}','${safeRecvName2}')">Chat</button>` : ''}
+        <div class="invite-response-headline" style="font-size:12px;">${headline} <span class="invite-response-pill ${inv.status}" style="font-size:9px;padding:1px 6px;">${pillLabel}</span>${showChat2 ? ` <button type="button" style="margin-left:4px;background:none;border:none;font-family:var(--font);font-size:11px;font-weight:700;color:var(--season-bg1);cursor:pointer;padding:0;" onclick="openChatSheet('${inv.receiver_id}','${safeRecvName2}')">Chat →</button>` : ''}</div>
       </div>`;
     });
   }
@@ -3339,8 +3338,7 @@ async function renderFriends(el) {
       const otherId = f.user_a === myId ? f.user_b : f.user_a;
       const otherName = (friendProfiles[otherId]?.full_name || 'Friend').replace(/'/g, "\\'");
       return friendRow(f, otherId,
-        `<button class="friend-btn primary" onclick="openChatSheet('${otherId}','${otherName}')">Chat</button>` +
-        `<button class="friend-btn outline" onclick="friendAction('remove','${f.id}')">Remove</button>`,
+        `<button class="friend-btn primary" onclick="openChatSheet('${otherId}','${otherName}')">Chat</button>`,
         true
       );
     }).join('');
@@ -3370,6 +3368,14 @@ async function renderFriends(el) {
   }
 
   el.innerHTML = html;
+}
+
+function confirmRemoveFriend(friendshipId) {
+  const ok = confirm("Remove friend?\n\nYou'll no longer see each other in Friends, but you can add them again later.");
+  if (ok) {
+    closeProfile();
+    friendAction('remove', friendshipId);
+  }
 }
 
 async function friendAction(action, friendshipId) {
@@ -3525,7 +3531,7 @@ function renderPlayerList(players) {
       if (!fs) {
         friendBtn = `<button class="friend-btn primary" onclick="event.stopPropagation();sendFriendRequest('${p.id}')">Add</button>`;
       } else if (fs.status === 'accepted') {
-        friendBtn = `<span style="font-size:11px;color:var(--ink3);font-weight:600;padding:5px 4px;">Friends</span>`;
+        friendBtn = `<span style="font-size:10px;font-weight:700;color:#1e8449;background:rgba(39,174,96,.12);border-radius:10px;padding:3px 9px;">Friends</span>`;
       } else if (fs.status === 'pending' && fs.iRequested) {
         friendBtn = `<button class="friend-btn outline" onclick="event.stopPropagation();friendAction('cancel','${fs.id}')">Pending</button>`;
       } else if (fs.status === 'pending') {
@@ -3615,8 +3621,7 @@ function buildPlayerCardHtml(p, activityItems) {
   } else if (fs.status === 'accepted') {
     const safeName = (p.full_name || '').replace(/'/g,"\\'");
     friendAction = `<button class="friend-btn primary" style="flex:1;" onclick="closeProfile();openInviteSheet('${p.id}','${safeName}');">Invite to hit</button>` +
-      `<button class="friend-btn primary" onclick="closeProfile();openChatSheet('${p.id}','${safeName}');">Chat</button>` +
-      `<button class="friend-btn outline" onclick="friendAction('remove','${fs.id}');closeProfile();">Remove</button>`;
+      `<button class="friend-btn primary" onclick="closeProfile();openChatSheet('${p.id}','${safeName}');">Chat</button>`;
   } else if (fs.status === 'pending' && fs.iRequested) {
     friendAction = `<span style="font-size:12px;color:var(--ink3);font-weight:600;flex:1;text-align:center;padding:8px 0;">Request sent</span><button class="friend-btn outline" onclick="friendAction('cancel','${fs.id}');closeProfile();">Cancel</button>`;
   } else if (fs.status === 'pending') {
@@ -3637,6 +3642,7 @@ function buildPlayerCardHtml(p, activityItems) {
       ${activitySection}
       ${noPublicInfo ? `<div style="font-size:13px;color:var(--ink3);text-align:center;padding:16px 0;">No public information shared.</div>` : ''}
       ${friendAction ? `<div class="player-card-friend-row">${friendAction}</div>` : ''}
+      ${fs?.status === 'accepted' ? `<div style="text-align:center;margin-top:10px;"><button type="button" onclick="confirmRemoveFriend('${fs.id}')" style="background:none;border:none;font-family:var(--font);font-size:12px;color:#c0392b;cursor:pointer;padding:4px;opacity:.75;">Remove friend</button></div>` : ''}
 
       <button onclick="closeProfile()" style="width:100%;background:var(--page);border:1.5px solid var(--border);border-radius:var(--r);padding:11px;font-family:var(--font);font-size:13px;font-weight:600;cursor:pointer;color:var(--ink2);margin-top:6px;">Close</button>
     </div>`;
