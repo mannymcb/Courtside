@@ -606,6 +606,19 @@ html, body { height: 100%; font-family: var(--font); background: var(--page); co
 .feed-reaction-pill.mine { background: rgba(200,230,58,.18); border-color: var(--season-bg1); color: var(--season-bg2); font-weight: 700; }
 .feed-reaction-pill:active { opacity: .7; }
 
+/* ── Upcoming sessions ── */
+.upcoming-card { background: var(--surface); border-radius: var(--r); border: 1px solid var(--border); padding: 12px 14px; margin-bottom: 8px; box-shadow: var(--shadow); }
+.upcoming-card-top { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin-bottom: 4px; }
+.upcoming-card-title { font-size: 13px; font-weight: 700; color: var(--ink); }
+.upcoming-card-meta { font-size: 12px; color: var(--ink3); margin-bottom: 9px; }
+.upcoming-status-pill { font-size: 10px; font-weight: 700; border-radius: 10px; padding: 2px 8px; flex-shrink: 0; }
+.upcoming-status-pill.accepted { background: rgba(39,174,96,.15); color: #1e8449; }
+.upcoming-status-pill.maybe { background: rgba(91,143,212,.15); color: #3a72b8; }
+.upcoming-card-actions { display: flex; gap: 7px; flex-wrap: wrap; }
+.upcoming-empty { text-align: center; padding: 22px 16px; background: var(--surface); border-radius: var(--r); border: 1px solid var(--border); }
+.upcoming-empty-title { font-size: 14px; font-weight: 700; color: var(--ink); margin-bottom: 4px; }
+.upcoming-empty-sub { font-size: 12px; color: var(--ink3); margin-bottom: 14px; line-height: 1.5; }
+
 /* ── Toast ── */
 #toast { position: fixed; bottom: calc(env(safe-area-inset-bottom) + 80px); left: 50%; transform: translateX(-50%) translateY(10px); background: #1a1a1a; color: #fff; padding: 10px 20px; border-radius: 20px; font-size: 13px; font-weight: 600; opacity: 0; transition: all .25s; z-index: 999; white-space: nowrap; pointer-events: none; }
 #toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
@@ -813,6 +826,8 @@ html, body { height: 100%; font-family: var(--font); background: var(--page); co
         <div class="wstat"><div class="wstat-val" id="ws-streak">—</div><div class="wstat-lbl">Streak</div></div>
       </div>
     </div>
+    <div style="margin:14px 0 8px;"><div class="sl" style="margin:0;">Upcoming sessions</div></div>
+    <div id="home-upcoming"></div>
     <div id="home-insights"></div>
     <div style="display:flex;align-items:center;justify-content:space-between;margin:14px 0 8px;">
       <div class="sl" style="margin:0;">Recent</div>
@@ -1866,9 +1881,13 @@ function selectInvitePill(group, btn, value) {
   if (group === 'type') inviteType = value;
   else inviteTiming = value;
   // Update sub-heading to reflect type
-  const typeLabels = { hit: 'hit', practice: 'practice', match: 'match', doubles: 'doubles' };
-  document.getElementById('invite-sheet-sub').textContent =
-    `Want to ${typeLabels[inviteType] || 'hit'} this week?`;
+  if (inviteType === 'match') {
+    document.getElementById('invite-sheet-sub').textContent = 'Schedule a match?';
+  } else {
+    const typeLabels = { hit: 'hit', practice: 'practice', doubles: 'doubles' };
+    document.getElementById('invite-sheet-sub').textContent =
+      `Want to ${typeLabels[inviteType] || 'hit'} this week?`;
+  }
 }
 
 async function submitHitInvite() {
@@ -1916,6 +1935,7 @@ async function submitHitInvite() {
     closeInviteSheet();
     await loadHitInvites();
     updateClubNavDot();
+    renderUpcomingSessions('home-upcoming');
     showToast('Invite sent 🎾');
   } catch(e) {
     showToast(e.message || 'Could not send invite');
@@ -1933,6 +1953,7 @@ async function respondInvite(inviteId, response) {
     });
     await loadHitInvites();
     updateClubNavDot();
+    renderUpcomingSessions('home-upcoming');
     const el = document.getElementById('club-tab-content');
     if (el && clubActiveTab === 'friends') await renderFriends(el);
     const msg = response === 'accepted' ? 'Invite accepted'
@@ -2159,6 +2180,168 @@ async function sendChatMessage() {
   } finally {
     updateChatSendState();
   }
+}
+
+// ── Upcoming sessions (accepted/maybe plans with a proposed date) ────────────
+function upcomingSessionTypeLabel(t) {
+  return { hit: 'Hit', practice: 'Practice', match: 'Match', doubles: 'Doubles' }[t] || 'Hit';
+}
+
+function upcomingSessionTimeLine(inv) {
+  const parts = [];
+  if (inv.proposed_date) {
+    const d = new Date(inv.proposed_date + 'T12:00:00');
+    parts.push(d.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' }));
+  }
+  if (inv.proposed_time) parts.push(inv.proposed_time);
+  if (inv.proposed_location) parts.push(inv.proposed_location);
+  return parts.join(' · ');
+}
+
+function getUpcomingSessions() {
+  if (!profile?.id) return [];
+  const myId = String(profile.id);
+  const todayStr = today(); // existing helper, returns YYYY-MM-DD
+
+  const list = hitInvites.filter(i =>
+    (String(i.sender_id) === myId || String(i.receiver_id) === myId) &&
+    (i.status === 'accepted' || i.status === 'maybe') &&
+    i.proposed_date &&
+    i.proposed_date >= todayStr
+  );
+
+  list.sort((a, b) => {
+    if (a.proposed_date !== b.proposed_date) return a.proposed_date.localeCompare(b.proposed_date);
+    const aT = a.updated_at || a.created_at || '';
+    const bT = b.updated_at || b.created_at || '';
+    return aT.localeCompare(bT);
+  });
+
+  return list;
+}
+
+async function renderUpcomingSessions(targetElId) {
+  const el = document.getElementById(targetElId);
+  if (!el) return;
+
+  await loadHitInvites();
+  const sessions = getUpcomingSessions();
+
+  if (!sessions.length) {
+    el.innerHTML = `<div class="upcoming-empty">
+      <div class="upcoming-empty-title">No sessions planned</div>
+      <div class="upcoming-empty-sub">Invite a friend to hit or schedule a match.</div>
+      <button onclick="goPage('club',document.getElementById('nb-club'));setClubTab('friends');" style="background:var(--season-bg1);color:#fff;border:none;border-radius:var(--r);padding:10px 22px;font-family:var(--font);font-size:13px;font-weight:700;cursor:pointer;">Plan a session</button>
+    </div>`;
+    return;
+  }
+
+  // Resolve names for the other party in each session
+  const myId = String(profile.id);
+  const otherIds = [...new Set(sessions.map(s => String(s.sender_id) === myId ? s.receiver_id : s.sender_id))];
+  let otherProfiles = {};
+  if (otherIds.length) {
+    try {
+      const rows = await sbFetch(`/rest/v1/profiles?id=in.(${otherIds.join(',')})&select=id,full_name`);
+      (Array.isArray(rows) ? rows : []).forEach(p => { otherProfiles[p.id] = p; });
+    } catch(e) { console.warn('[Courtside] upcoming sessions profile load failed:', e.message); }
+  }
+
+  el.innerHTML = sessions.slice(0, 6).map(inv => {
+    const otherId = String(inv.sender_id) === myId ? inv.receiver_id : inv.sender_id;
+    const otherName = otherProfiles[otherId]?.full_name || 'Friend';
+    const safeName = otherName.replace(/'/g, "\\'");
+    const typeLbl = upcomingSessionTypeLabel(inv.invite_type);
+    const titleVerb = inv.invite_type === 'match' ? 'Match with' : inv.invite_type === 'practice' ? 'Practice with' : inv.invite_type === 'doubles' ? 'Doubles with' : 'Hit with';
+    const timeLine = upcomingSessionTimeLine(inv) || inviteTimingLabel(inv.timing);
+    const pillLabel = inv.status === 'accepted' ? 'Accepted' : 'Maybe';
+    const isMatchType = inv.invite_type === 'match';
+
+    const actions = [
+      `<button class="friend-btn primary" onclick="openChatSheet('${otherId}','${safeName}')">Chat</button>`,
+    ];
+    if (isMatchType) {
+      actions.push(`<button class="friend-btn outline" onclick="logResultFromSession('${inv.id}')">Log result</button>`);
+    }
+    actions.push(`<button class="friend-btn outline" onclick="viewSessionDetails('${inv.id}')">View details</button>`);
+
+    return `<div class="upcoming-card">
+      <div class="upcoming-card-top">
+        <div class="upcoming-card-title">${titleVerb} ${otherName} <span style="color:var(--ink3);font-weight:600;font-size:11px;">· ${typeLbl}</span></div>
+        <span class="upcoming-status-pill ${inv.status}">${pillLabel}</span>
+      </div>
+      <div class="upcoming-card-meta">${timeLine}</div>
+      <div class="upcoming-card-actions">${actions.join('')}</div>
+    </div>`;
+  }).join('');
+}
+
+function viewSessionDetails(inviteId) {
+  const inv = hitInvites.find(i => i.id === inviteId);
+  if (!inv) return;
+  const myId = String(profile.id);
+  const otherId = String(inv.sender_id) === myId ? inv.receiver_id : inv.sender_id;
+
+  sbFetch(`/rest/v1/profiles?id=eq.${otherId}&select=full_name&limit=1`).then(rows => {
+    const otherName = (Array.isArray(rows) && rows[0]?.full_name) || 'Friend';
+    const typeLbl = upcomingSessionTypeLabel(inv.invite_type);
+    const dateStr = inv.proposed_date
+      ? new Date(inv.proposed_date + 'T12:00:00').toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' })
+      : inviteTimingLabel(inv.timing);
+    const rowStyle = 'display:flex;align-items:baseline;justify-content:space-between;padding:9px 0;border-bottom:1px solid var(--border);';
+    const labelStyle = 'font-size:11px;font-weight:700;letter-spacing:.5px;text-transform:uppercase;color:var(--ink3);flex-shrink:0;margin-right:12px;';
+    const valueStyle = 'font-size:14px;font-weight:500;color:var(--ink);text-align:right;';
+    const rows2 = [
+      ['Person', otherName],
+      ['Type', typeLbl],
+      ['Date', dateStr],
+      ['Time', inv.proposed_time || '—'],
+      ['Location', inv.proposed_location || '—'],
+      ['Status', inv.status === 'accepted' ? 'Accepted' : 'Maybe'],
+    ];
+    let rowsHtml = rows2.map(([l,v]) => `<div style="${rowStyle}"><span style="${labelStyle}">${l}</span><span style="${valueStyle}">${v}</span></div>`).join('');
+    if (inv.plan_note || inv.note) {
+      rowsHtml += `<div style="${rowStyle}border-bottom:none;"><span style="${labelStyle}">Note</span><span style="${valueStyle}">"${inv.plan_note || inv.note}"</span></div>`;
+    }
+    document.getElementById('prof-body').innerHTML = `
+      <div style="text-align:center;margin-bottom:16px;">
+        <div class="prof-name-display">${typeLbl} session</div>
+      </div>
+      <div style="margin-bottom:14px;">${rowsHtml}</div>
+      <button onclick="closeProfile()" style="width:100%;background:var(--page);border:1.5px solid var(--border);border-radius:var(--r);padding:11px;font-family:var(--font);font-size:13px;font-weight:600;cursor:pointer;color:var(--ink2);">Close</button>
+    `;
+    document.getElementById('prof-overlay').classList.add('on');
+  }).catch(() => showToast('Could not load session details'));
+}
+
+async function logResultFromSession(inviteId) {
+  const inv = hitInvites.find(i => i.id === inviteId);
+  if (!inv) return;
+  const myId = String(profile.id);
+  const otherId = String(inv.sender_id) === myId ? inv.receiver_id : inv.sender_id;
+
+  let otherName = 'Friend';
+  try {
+    const rows = await sbFetch(`/rest/v1/profiles?id=eq.${otherId}&select=full_name&limit=1`);
+    otherName = (Array.isArray(rows) && rows[0]?.full_name) || 'Friend';
+  } catch(e) { console.warn('[Courtside] logResultFromSession profile lookup failed:', e.message); }
+
+  goLogMatch();
+  // Pre-fill available details — user still enters result/score manually
+  const oppInput = document.getElementById('m-opp');
+  if (oppInput) oppInput.value = otherName;
+  const dateInput = document.getElementById('m-date');
+  if (dateInput && inv.proposed_date) dateInput.value = inv.proposed_date;
+  const locInput = document.getElementById('m-location');
+  if (locInput && inv.proposed_location) locInput.value = inv.proposed_location;
+
+  if (inv.invite_type === 'doubles') {
+    const typeSel = document.getElementById('m-type');
+    if (typeSel) { typeSel.value = 'doubles'; onTypeChange(); }
+    const partnerRow = document.getElementById('m-partner-row');
+    if (partnerRow) partnerRow.style.display = 'block';
+  }
+  showToast('Match form pre-filled — add your result');
 }
 
 function inviteTimingLabel(t) {
@@ -4444,6 +4627,7 @@ async function initializeApp() {
   hideLoading();
   await Promise.all([loadAppData(), loadActivityPrivacy().catch(()=>{}), loadFriendships().catch(()=>{}), loadHitInvites().catch(()=>{}), loadUnreadCounts().catch(()=>{})]);
   updateClubNavDot();
+  renderUpcomingSessions('home-upcoming');
   console.log('[Courtside] initializeApp complete');
 }
 
