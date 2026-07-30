@@ -2447,10 +2447,19 @@ function playTennisPopSound() {
 function setSeason() {
   const m = new Date().getMonth(), d = new Date().getDate();
   let name, flag, bg1, bg2;
-  if (m === 11 || m <= 1)                          { name='Australian Open'; flag='🇦🇺'; bg1='#004f9e'; bg2='#0073d4'; }
-  else if (m <= 4 || (m === 5 && d <= 15))          { name='Roland Garros';  flag='🇫🇷'; bg1='#b85010'; bg2='#d9621a'; }
-  else if ((m===5&&d>15) || m===6 || (m===7&&d<=15)){ name='Wimbledon';      flag='🇬🇧'; bg1='#1f5c1f'; bg2='#2e7d2e'; }
-  else                                               { name='US Open';        flag='🇺🇸'; bg1='#1a3870'; bg2='#1e4db0'; }
+  // Australian Open: Dec–Feb
+  // Roland Garros: Mar–Jun 15
+  // Wimbledon: Jun 16–Jul 31
+  // US Open: Aug 1–Nov
+  if (m === 11 || m <= 1) {
+    name = 'Australian Open'; flag = '🇦🇺'; bg1 = '#004f9e'; bg2 = '#0073d4';
+  } else if (m >= 2 && (m <= 4 || (m === 5 && d <= 15))) {
+    name = 'Roland Garros'; flag = '🇫🇷'; bg1 = '#b85010'; bg2 = '#d9621a';
+  } else if ((m === 5 && d > 15) || m === 6) {
+    name = 'Wimbledon'; flag = '🇬🇧'; bg1 = '#1f5c1f'; bg2 = '#2e7d2e';
+  } else {
+    name = 'US Open'; flag = '🇺🇸'; bg1 = '#1a3870'; bg2 = '#1e4db0';
+  }
   document.getElementById('season-badge').textContent = flag + ' ' + name;
   document.documentElement.style.setProperty('--season-bg1', bg1);
   document.documentElement.style.setProperty('--season-bg2', bg2);
