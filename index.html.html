@@ -7,9 +7,7 @@
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="apple-mobile-web-app-title" content="Courtside">
 <meta name="theme-color" content="#b85010">
-<link rel="manifest" href="manifest.json">
-<link rel="apple-touch-icon" href="apple-touch-icon.png">
-<link rel="icon" href="icon-192.png">
+
 <title>Courtside</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Figtree:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
@@ -2447,6 +2445,10 @@ function playTennisPopSound() {
 function setSeason() {
   const m = new Date().getMonth(), d = new Date().getDate();
   let name, flag, bg1, bg2;
+
+  // JavaScript months are zero-based:
+  // 0 = Jan, 5 = Jun, 6 = Jul, 7 = Aug, 11 = Dec
+  //
   // Australian Open: Dec–Feb
   // Roland Garros: Mar–Jun 15
   // Wimbledon: Jun 16–Jul 31
@@ -2460,9 +2462,17 @@ function setSeason() {
   } else {
     name = 'US Open'; flag = '🇺🇸'; bg1 = '#1a3870'; bg2 = '#1e4db0';
   }
-  document.getElementById('season-badge').textContent = flag + ' ' + name;
+
+  const badge = document.getElementById('season-badge');
+  if (badge) badge.textContent = flag + ' ' + name;
+
   document.documentElement.style.setProperty('--season-bg1', bg1);
   document.documentElement.style.setProperty('--season-bg2', bg2);
+
+  const metaTheme = document.querySelector('meta[name="theme-color"]');
+  if (metaTheme) metaTheme.setAttribute('content', bg1);
+
+  console.log('[Courtside] seasonal theme:', name, 'month:', m, 'day:', d);
 }
 
 // ── Log ───────────────────────────────────────────────────────────────────────
@@ -4555,7 +4565,6 @@ function showToast(msg) {
 }
 
 // ── Init ──────────────────────────────────────────────────────────────────────
-setSeason();
 updateSoundToggleUI();
 showScreen('auth-screen'); // safe default
 
@@ -4645,67 +4654,28 @@ async function initializeApp() {
   console.log('[Courtside] initializeApp complete');
 }
 
-// Run on page load
-(async () => { await initializeApp(); })();
-
-// ── PWA: service worker registration ──────────────────────────────────────────
-if ('serviceWorker' in navigator) {
-  window.addEventListener('load', () => {
-    navigator.serviceWorker.register('service-worker.js')
-      .then(reg => console.log('[Courtside] service worker registered:', reg.scope))
-      .catch(err => console.warn('[Courtside] service worker registration failed:', err.message));
-  });
+// ── Beta: clear any stale service worker caches ──────────────────────────────
+async function clearBetaCaches() {
+  try {
+    if ('serviceWorker' in navigator) {
+      const regs = await navigator.serviceWorker.getRegistrations();
+      await Promise.all(regs.map(reg => reg.unregister()));
+      console.log('[Courtside] service workers unregistered for beta');
+    }
+    if ('caches' in window) {
+      const keys = await caches.keys();
+      await Promise.all(keys.map(key => caches.delete(key)));
+      console.log('[Courtside] caches cleared for beta');
+    }
+  } catch (e) {
+    console.warn('[Courtside] cache cleanup skipped:', e.message);
+  }
 }
 
-// ── PWA: subtle "Add to Home Screen" helper ───────────────────────────────────
-(function () {
-  const DISMISS_KEY = 'cs_install_hint_dismissed';
-  if (localStorage.getItem(DISMISS_KEY)) return;
-
-  const isStandalone = window.matchMedia('(display-mode: standalone)').matches
-    || window.navigator.standalone === true;
-  if (isStandalone) return; // already installed
-
-  const isIOS = /iphone|ipad|ipod/i.test(navigator.userAgent);
-  let deferredPrompt = null;
-
-  function showInstallHint(onClick) {
-    const bar = document.createElement('div');
-    bar.id = 'pwa-install-hint';
-    bar.style.cssText = 'position:fixed;left:0;right:0;bottom:0;z-index:700;display:flex;align-items:center;justify-content:space-between;gap:10px;background:var(--surface);border-top:1px solid var(--border);padding:10px 14px;padding-bottom:calc(env(safe-area-inset-bottom) + 10px);font-family:var(--font);max-width:460px;margin:0 auto;box-shadow:0 -2px 10px rgba(0,0,0,.08);';
-    bar.innerHTML = `
-      <span style="font-size:12px;color:var(--ink2);flex:1;">Add Courtside to your Home Screen</span>
-      <button id="pwa-install-btn" style="background:var(--season-bg1);color:#fff;border:none;border-radius:14px;padding:6px 12px;font-family:var(--font);font-size:12px;font-weight:700;cursor:pointer;flex-shrink:0;">Add</button>
-      <button id="pwa-install-dismiss" style="background:none;border:none;color:var(--ink4);font-size:18px;line-height:1;cursor:pointer;padding:0 2px;flex-shrink:0;">×</button>
-    `;
-    document.body.appendChild(bar);
-    document.getElementById('pwa-install-btn').onclick = onClick;
-    document.getElementById('pwa-install-dismiss').onclick = () => {
-      localStorage.setItem(DISMISS_KEY, '1');
-      bar.remove();
-    };
-  }
-
-  if (isIOS) {
-    // iOS has no native install prompt — show a simple instructional hint
-    showInstallHint(() => {
-      showToast('Tap Share, then "Add to Home Screen"');
-    });
-  } else {
-    window.addEventListener('beforeinstallprompt', (e) => {
-      e.preventDefault();
-      deferredPrompt = e;
-      showInstallHint(async () => {
-        if (!deferredPrompt) return;
-        deferredPrompt.prompt();
-        await deferredPrompt.userChoice;
-        deferredPrompt = null;
-        const bar = document.getElementById('pwa-install-hint');
-        if (bar) bar.remove();
-        localStorage.setItem(DISMISS_KEY, '1');
-      });
-    });
-  }
+(async () => {
+  await clearBetaCaches();
+  setSeason();
+  await initializeApp();
 })();
 </script>
 </body>
